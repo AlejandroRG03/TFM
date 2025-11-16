@@ -9,7 +9,7 @@ nrows = 1_000_000 # load just the firt million of rows
 
 df = read_root(path, tree, columns, nrows=nrows)
 
-# Some plots
+# ======= Some plots ======= #
 
 # transverse hits
 
@@ -40,10 +40,11 @@ ax1 = fig.add_subplot(1,2,1, projection='3d')
 ax2 = fig.add_subplot(1,2,2, projection='3d')
 
 # add rotation for better visualization
+
 ax1.view_init(elev=5, azim=45)
 ax2.view_init(elev=75, azim=0)
 
-# sample 10000 points for better visualization
+# sample 10000 points for better visualization and performance
 
 df_sampled = df.sample(n=10000, random_state=42)
 
