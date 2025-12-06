@@ -39,7 +39,7 @@ plt.figure()
 plt.plot(df[df['in_codexb']]['z'], df[df['in_codexb']]['x'], '.', color = 'green', zorder=1, label='In CODEX-B acceptance')
 plt.plot(df[~df['in_codexb']]['z'], df[~df['in_codexb']]['x'], '.', color = 'blue', zorder=0, label='Out of CODEX-B acceptance')
 
-# plot the cone boundary
+# plot the cone boundary (the factors are just for scaling purposes)
 
 a_z = codexb_axis[2] * (np.cos(max_angle) - np.sin(max_angle)) * 70
 a_x = codexb_axis[0] * (np.cos(max_angle) + np.sin(max_angle)) * 70
