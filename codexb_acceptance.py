@@ -11,11 +11,11 @@ df = read_root(path, tree, columns, nrows=nrows)
 
 # Define CODEX-B acceptance geometry, model the acceptance as a cone of radius d at distance r from the interaction point
 
-d = 10000 # radius of the cone
+d = 10000 # radius of the cone in mm
 
-x = 23725
-y = 0
-z = 12650
+x = 23725 # mm
+y = 0 # mm
+z = 12650 # mm
 
 r = np.sqrt( x**2 + y**2 + z**2 )
 
@@ -36,8 +36,8 @@ df['in_codexb'] = df['angles'].abs() < max_angle
 
 plt.figure()
 
-plt.plot(df[df['in_codexb']]['z'], df[df['in_codexb']]['x'], '.', color = 'green', zorder=1, label='In CODEX-B acceptance')
-plt.plot(df[~df['in_codexb']]['z'], df[~df['in_codexb']]['x'], '.', color = 'blue', zorder=0, label='Out of CODEX-B acceptance')
+plt.plot(df[df['in_codexb']]['z'], df[df['in_codexb']]['x'], '.', color = 'green', zorder=3, label='In CODEX-B acceptance')
+plt.plot(df[~df['in_codexb']]['z'], df[~df['in_codexb']]['x'], '.', color = 'blue', zorder=2, label='Out of CODEX-B acceptance')
 
 # plot the cone boundary (the factors are just for scaling purposes)
 
@@ -48,12 +48,12 @@ b_z = codexb_axis[2] * (np.cos(max_angle) + np.sin(max_angle)) * 150
 b_x = codexb_axis[0] * (np.cos(max_angle) - np.sin(max_angle)) * 150
 
 plt.plot([0, a_z], [0, a_x], 'r--', label='CODEX-B acceptance boundary', zorder=2)
-plt.plot([0, b_z], [0, b_x], 'r--', zorder=2)
+plt.plot([0, b_z], [0, b_x], 'r--', zorder=4)
 
 
-plt.grid(linestyle='--')
-plt.xlabel('z')
-plt.ylabel('x')
+plt.grid(linestyle='--', zorder = 0)
+plt.xlabel('z (mm)')
+plt.ylabel('x (mm)')
 plt.legend()
 
 plt.savefig('first_plots/codexb_acceptance.png')
