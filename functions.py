@@ -33,7 +33,6 @@ def read_root(path, tree, columns, nrows = None):
     return df
 
 
-
 def vector_norm(data):
     """
     Docstring for vector_norm function
