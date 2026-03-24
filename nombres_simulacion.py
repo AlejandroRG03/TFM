@@ -1,6 +1,6 @@
 import uproot
 
-def export_column_names(path):
+def export_column_names(path, filename="lista_variables.txt"):
     with uproot.open(path) as f:
         # En DaVinci, la ruta suele ser 'Carpeta/NombreDelArbol'
         # Basándome en tu mensaje, vamos a probar esta ruta:
@@ -13,12 +13,12 @@ def export_column_names(path):
             # .keys() sobre un objeto 'tree' te da los nombres de las columnas
             columnas = tree.keys()
             
-            with open("lista_variables.txt", "w") as out:
+            with open(filename, "w") as out:
                 for col in columnas:
                     out.write(col + "\n")
             
             print(f"¡Listo! Se han encontrado {len(columnas)} variables.")
-            print("Las he guardado en el archivo: lista_variables.txt")
+            print(f"Las he guardado en el archivo: {filename}")
             
             # Mostrar las primeras 10 por pantalla para que veas el formato
             print("\nEjemplo de variables encontradas:")
@@ -32,6 +32,10 @@ def export_column_names(path):
 
 # Ejecutamos
 
-path = '/lustre/LHCb/alejandro.rodriguez/DecFiles/DVntuple.root'
-
-export_column_names(path)
+pathKL0 = '/home3/alejandro.rodriguez/DecFiles/KL0ntuple.root'
+pathmup = '/home3/alejandro.rodriguez/DecFiles/mupntuple.root'
+pathmun = '/home3/alejandro.rodriguez/DecFiles/mumntuple.root'
+ 
+export_column_names(pathKL0, "lista_variables_KL0.txt")
+export_column_names(pathmup, "lista_variables_mup.txt")
+export_column_names(pathmun, "lista_variables_mum.txt")
