@@ -32,18 +32,21 @@ def read_root(path, tree, columns, nrows = None):
     return df
 
 
-def vector_norm(data):
+def vector_norm(data, x='x', y='y', z='z'):
     """
     Docstring for vector_norm function
 
     :param data: DataFrame containing vector components in columns 'x', 'y', 'z'
-    
+    :param x: Name of the column containing the x-component
+    :param y: Name of the column containing the y-component
+    :param z: Name of the column containing the z-component
+
     :return: Column Series containing the vector norms
     """
 
-    return np.sqrt(data['x']**2 + data['y']**2 + data['z']**2)
+    return np.sqrt(data[x]**2 + data[y]**2 + data[z]**2)
 
-def compute_angles(axis, vectors):
+def compute_angles(axis, vectors, x='x', y='y', z='z'):
     """
     Docstring for compute_angles function
 
@@ -53,11 +56,11 @@ def compute_angles(axis, vectors):
     :return: Series containing the angles in radians between each vector and the reference axis
     """
 
-    dot_products = (vectors['x'] * axis[0] +
-                    vectors['y'] * axis[1] +
-                    vectors['z'] * axis[2])
+    dot_products = (vectors[x] * axis[0] +
+                    vectors[y] * axis[1] +
+                    vectors[z] * axis[2])
     
-    cosines = dot_products / (vector_norm(vectors))
+    cosines = dot_products / (vector_norm(vectors, x, y, z))
 
     angles = np.arccos(cosines)
 

@@ -35,7 +35,9 @@ def export_column_names(path, filename="lista_variables.txt"):
 pathKL0 = '/home3/alejandro.rodriguez/DecFiles/KL0ntuple.root'
 pathmup = '/home3/alejandro.rodriguez/DecFiles/mupntuple.root'
 pathmun = '/home3/alejandro.rodriguez/DecFiles/mumntuple.root'
+pathsignal = '/home3/alejandro.rodriguez/DecFiles/signalntuple.root'
  
 export_column_names(pathKL0, "lista_variables_KL0.txt")
 export_column_names(pathmup, "lista_variables_mup.txt")
 export_column_names(pathmun, "lista_variables_mum.txt")
+export_column_names(pathsignal, "lista_variables_signal.txt")

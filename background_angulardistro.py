@@ -10,6 +10,7 @@ columnsKL0 = [
     "KL0_TRUEP_Y",
     "KL0_TRUEP_Z",
     "KL0_TRUEPT",
+    "EventInSequence"
 ]
 columnsmum = [  # gaudi saves mu+ as mu-, so same names
     "muminus_TRUEP_E",
@@ -17,6 +18,7 @@ columnsmum = [  # gaudi saves mu+ as mu-, so same names
     "muminus_TRUEP_Y",
     "muminus_TRUEP_Z",
     "muminus_TRUEPT",
+    "EventInSequence"
 ]
 
 
@@ -28,6 +30,10 @@ df_mum = read_root(pathmun, tree=tree, columns=columnsmum)
 df_KL0.columns = [col.replace('KL0_', '') for col in df_KL0.columns]
 df_mup.columns = [col.replace('muminus_', '') for col in df_mup.columns]
 df_mum.columns = [col.replace('muminus_', '') for col in df_mum.columns]
+
+print(df_KL0.head())
+print(df_mup.head())
+print(df_mum.head())
 
 # Define CODEX-B acceptance geometry, model the acceptance as a cone of radius d at distance r from the interaction point
 
@@ -74,11 +80,23 @@ print(f'Total mu- particles: {df_mum.shape[0]}')
 print(f'mu+_in/mu+_total: {df_mup[df_mup["in_codex"]].shape[0] / df_mup.shape[0]}')
 print(f'mu-_in/mu-_total: {df_mum[df_mum["in_codex"]].shape[0] / df_mum.shape[0]}')
 
+# Check that we always have a KL0, mu+ or mu- in codex for each event
+events_with_KL0_in_codex = set(df_KL0[df_KL0['in_codex']]['EventInSequence']) # set removes duplicates, count events with at least one KL0 in codex
+events_with_mup_in_codex = set(df_mup[df_mup['in_codex']]['EventInSequence'])
+events_with_mum_in_codex = set(df_mum[df_mum['in_codex']]['EventInSequence'])
+print(f'Events with KL0 in CODEX-b: {len(events_with_KL0_in_codex)}')
+print(f'Events with mu+ in CODEX-b: {len(events_with_mup_in_codex)}')
+print(f'Events with mu- in CODEX-b: {len(events_with_mum_in_codex)}')
+# The union of the sets gives us the total number of unique events that have at least one of the particles in codex
+print(f'Events with KL0 or mu+ or mu- in CODEX-b: {len(events_with_KL0_in_codex.union(events_with_mup_in_codex).union(events_with_mum_in_codex))}')
+# The simulation has 20 events
+print(f'Total events: {20}')
+
 # histogram of angles
 
 # KL0
 plt.figure(figsize=(10, 6))
-plt.hist(df_KL0['codex_angles'], bins=50, range=(0, np.pi/2), alpha=0.7, label='KL0')
+plt.hist(df_KL0['codex_angles'], bins=50, range=(0, np.pi), alpha=0.7, label='KL0')
 plt.axvline(x=codex_angular_aperture, color='r', linestyle='--', label='CODEX-b acceptance')
 plt.xlabel('Angle with respect to CODEX-b axis (radians)')
 plt.ylabel('Number of particles')
