@@ -66,3 +66,17 @@ def compute_angles(axis, vectors, x='x', y='y', z='z'):
 
     return angles
 
+def spherical_angles(vectors, x='x', y='y', z='z'):
+    """
+    Docstring for spherical_angles function
+
+    :param vectors: DataFrame containing vector components in columns 'x', 'y', 'z'
+    
+    :return: Angles (theta, phi) in radians for each vector
+    """
+
+    r = vector_norm(vectors, x, y, z)
+    theta = np.arccos(vectors[z] / r)  # polar angle
+    phi = np.arctan2(vectors[y], vectors[x])  # azimuthal angle
+
+    return theta, phi
