@@ -21,7 +21,7 @@ VAR_NAMES = [
 TREE_NAME = "VeloMultiTuple_73eaa531/Clusters"
 FULL_PATH = f"{INPUT_FILE_PATH}{INPUT_FILE_NAME}:{TREE_NAME}"
 
-K_NEIGHBOURS = 5  
+K_NEIGHBOURS = 5 
 
 # ==============================================================================
 # PROCESSING PIPELINE
@@ -36,23 +36,45 @@ def prepare_torch_files():
     chunk_counter = 0
     total_events = 0
 
+    # the last event in the chunks may be incomplete, so we keep track of it to merge with the next chunk
+    leftover_df = pd.DataFrame()
+
     # Iterate in chunks to avoid RAM saturation (100MB chunks)
     for chunk in uproot.iterate(FULL_PATH, VAR_NAMES, step_size="100 MB", library="pd"):
+
+        # --- 0. HANDLE LEFTOVER FROM PREVIOUS CHUNK ---
+
+        if not leftover_df.empty:
+            chunk = pd.concat([leftover_df, chunk], ignore_index=True)
+            
+        # 2. Identify the last event in this chunk (may be incomplete)
+        last_event_id = chunk['eventNumber'].iloc[-1]
+        
+        # 3. Split the chunk into complete events and leftover
+        is_last_event = (chunk['eventNumber'] == last_event_id)
+    
+        leftover_df = chunk[is_last_event].copy()    # save it from next iteration
+        df_to_process = chunk[~is_last_event].copy() # complete events
+
+        # Si por casualidad un evento fuera tan grande que ocupara todo el chunk
+        if df_to_process.empty:
+            continue
+
         
         # --- 1. FEATURE ENGINEERING ---
         # Spherical/Collider variables (Mathematically redundant, but shortcuts for the GNN)
-        chunk['r_T'], chunk['eta'], chunk['phi'] = collider_system(chunk, x='x', y='y', z='z')
-        chunk['codex_angle'] = compute_codex_angles(chunk, x='x', y='y', z='z')
+        df_to_process['r_T'], df_to_process['eta'], df_to_process['phi'] = collider_system(df_to_process, x='x', y='y', z='z')
+        df_to_process['codex_angle'] = compute_codex_angles(df_to_process, x='x', y='y', z='z')
 
         # --- 2. NORMALIZATION ---
         cont_cols = ['x', 'y', 'z', 'r_T', 'phi', 'eta', 'n_pix', 'codex_angle'] # standardize only numerical features, not categorical
-        chunk[cont_cols] = (chunk[cont_cols] - chunk[cont_cols].mean()) / (chunk[cont_cols].std() + 1e-8)
+        df_to_process[cont_cols] = (df_to_process[cont_cols] - df_to_process[cont_cols].mean()) / (df_to_process[cont_cols].std() + 1e-8)
         
         # Normalize global event variables
         global_cols = ['nVtx_per_event', 'nClu_per_event', 'nTrk_per_event']
-        chunk[global_cols] = (chunk[global_cols] - chunk[global_cols].mean()) / (chunk[global_cols].std() + 1e-8)
+        df_to_process[global_cols] = (df_to_process[global_cols] - df_to_process[global_cols].mean()) / (df_to_process[global_cols].std() + 1e-8)
 
-        events = chunk.groupby("eventNumber")
+        events = df_to_process.groupby("eventNumber")
         chunk_data_list = []
 
         for event_id, df_event in events:
@@ -72,11 +94,12 @@ def prepare_torch_files():
             global_attr = torch.tensor(df_event[global_cols].iloc[0].values, dtype=torch.float).unsqueeze(0)
 
             # --- D. Edge Creation (k-NN) ---
-            # Use raw coordinates ONLY to calculate distances, 
-            # but divide Z by 10 so neighbors are searched more spherically and
-            # follow track shapes, mitigating VELO elongation.
-            coords = df_event[['x', 'y', 'z']].values.copy()
-            coords[:, 2] = coords[:, 2] / 10.0  # Scale Z
+            # Using spatial coordinates (eta, phi, z) for proximity-based graph construction
+            # these features will help the GNN to build connections that tend to link hits belonging
+            # to the same particle trajectory, since in VELO there are no magnetic fields, so particles
+            # travel in straight lines, which means that eta and phi are approximately constant along the trajectory
+            # while z changes when crossing different layers of the detector.
+            coords = df_event[['eta', 'phi', 'z']].values.copy()
             coords_tensor = torch.tensor(coords, dtype=torch.float)
             
             edge_index = knn_graph(coords_tensor, k=K_NEIGHBOURS, loop=False)
@@ -88,7 +111,7 @@ def prepare_torch_files():
             graph = Data(
                 x_cont=x_cont, 
                 x_cat=x_cat,
-                edge_index=edge_index, 
+                edge_index=edge_index, # connections based on spatial proximity
                 y=y_tensor,
                 global_attr=global_attr,
                 event_id=torch.tensor([event_id], dtype=torch.long)
