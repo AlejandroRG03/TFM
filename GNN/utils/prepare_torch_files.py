@@ -11,9 +11,9 @@ from concurrent.futures import ThreadPoolExecutor
 # ==============================================================================
 # MAIN CONFIGURATION
 # ==============================================================================
-INPUT_FILE_NAME = "ntuple_background_38011800.root"
-IS_SIGNAL = 0
-DEC_ID    = "38011800"
+INPUT_FILE_NAME = "ntuple_signal_40114060.root"
+IS_SIGNAL = 1
+DEC_ID    = "40114060"
 
 INPUT_FILE_PATH = "/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/"
 OUTPUT_DIR      = "/lustre/LHCb/alejandro.rodriguez/torch_data"
@@ -78,7 +78,8 @@ def process_event(args):
         edge_index=edge_index,
         y=y,
         global_attr=global_attr,
-        event_id=torch.tensor([event_id], dtype=torch.long)
+        event_id=torch.tensor([event_id], dtype=torch.long),
+        num_nodes = x_cont.shape[0]
     )
 
 
