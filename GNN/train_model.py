@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.optim import Adam # adam is a powerful optimizer
 from torch_geometric.loader import DataLoader
 from codex_gnn_model import CODEXVetoGNN
+import itertools
 import numpy as np
 from sklearn.metrics import roc_auc_score, accuracy_score
 
@@ -49,6 +50,18 @@ def get_files(data_dir, dec_ids, data_type):
         path = os.path.join(data_dir, data_type, dec_id, "*.pt")
         files.extend(glob.glob(path))
     return files
+
+def get_paired_files(sig_list, bkg_list):
+    """
+    Pairs signal and background files for training. If one list is shorter, it will cycle through it.
+    """
+    if not sig_list or not bkg_list:
+        raise ValueError("[ERROR] No signal or background files found.")
+
+    if len(sig_list) > len(bkg_list):
+        return list(zip(sig_list, itertools.cycle(bkg_list)))
+    else:
+        return list(zip(itertools.cycle(sig_list), bkg_list))
 
 def run_epoch(model, loader_files, device, criterion, optimizer=None):
     """Runs a single epoch of training or validation."""
@@ -118,9 +131,10 @@ def train():
     sig_train = sig_files[:n_train_sig]
     bkg_train = bkg_files[:n_train_bkg]
 
-    val_files   = list(zip(sig_files[n_train_sig:], bkg_files[n_train_bkg:]))
+    val_files   = get_paired_files(sig_files[n_train_sig:], bkg_files[n_train_bkg:])
 
     print(f"--> Dataset: {len(sig_train)} train chunks, {len(val_files)} val chunks")
+    
 
     # 2. Model, Loss, Optimizer
     model = CODEXVetoGNN().to(device)
@@ -135,8 +149,8 @@ def train():
     for epoch in range(EPOCHS):
         random.shuffle(sig_train)
         random.shuffle(bkg_train)
-        assert len(sig_files) == len(bkg_files), f"Mismatch: {len(sig_files)} sig vs {len(bkg_files)} bkg chunks"
-        train_files = list(zip(sig_train, bkg_train))
+
+        train_files = get_paired_files(sig_train, bkg_train)
         # Train
         t_loss, t_acc, t_auc = run_epoch(model, train_files, device, criterion, optimizer)
         
