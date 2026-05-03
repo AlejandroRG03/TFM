@@ -3,7 +3,7 @@ import glob
 import torch
 import random
 import torch.nn as nn
-from torch.optim import Adam # adam is a powerful optimizer
+from torch.optim import Adam
 from torch_geometric.loader import DataLoader
 from codex_gnn_model import CODEXVetoGNN
 import itertools
@@ -36,7 +36,7 @@ OUTPUT_NAME = f"S{SIGNAL_DEC_IDS[0]}_B{BACKGROUND_DEC_IDS[0]}"
 BATCH_SIZE    = 256
 EPOCHS        = 20
 LEARNING_RATE = 1e-3
-MAX_CHUNKS    = 2      # Set to None to use all data, WARNING: only if bkg and sig have the same number of chunks!
+MAX_CHUNKS    = 2      # Set to None to use all data
 TRAIN_SPLIT   = 0.8
 PATIENCE      = 10
 
