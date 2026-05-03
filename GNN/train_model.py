@@ -32,7 +32,7 @@ BACKGROUND_DEC_IDS  = ["38011800"]
 
 OUTPUT_NAME = f"S{SIGNAL_DEC_IDS[0]}_B{BACKGROUND_DEC_IDS[0]}"
 
-BATCH_SIZE    = 16
+BATCH_SIZE    = 256
 EPOCHS        = 20
 LEARNING_RATE = 1e-3
 MAX_CHUNKS    = 2      # Set to None to use all data, WARNING: only if bkg and sig have the same number of chunks!
@@ -61,7 +61,7 @@ def run_epoch(model, loader_files, device, criterion, optimizer=None):
     # loader_files is a list of tuples (sig_file, bkg_file)
     for sig_file, bkg_file in loader_files:
         combined_data = torch.load(sig_file, weights_only=False) + torch.load(bkg_file, weights_only=False)
-        loader = DataLoader(combined_data, batch_size=BATCH_SIZE, shuffle=is_train)
+        loader = DataLoader(combined_data, batch_size=BATCH_SIZE, shuffle=is_train, num_workers=4)
 
         for batch in loader:
             batch = batch.to(device)
@@ -72,8 +72,8 @@ def run_epoch(model, loader_files, device, criterion, optimizer=None):
                 loss = criterion(out, batch.y)
                 
                 if is_train:
-                    loss.backward()
-                    optimizer.step()
+                    loss.backward()   # backpropagation
+                    optimizer.step()  # update weights
 
             total_loss += loss.item() * batch.num_graphs
             total_graphs += batch.num_graphs
@@ -124,8 +124,9 @@ def train():
 
     # 2. Model, Loss, Optimizer
     model = CODEXVetoGNN().to(device)
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
+    pos_weight = torch.tensor([n_train_sig / n_train_bkg]).to(device)
+    criterion  = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    optimizer  = Adam(model.parameters(), lr=LEARNING_RATE)
 
     # 3. Training Loop
     best_val_loss = float('inf')
@@ -134,6 +135,7 @@ def train():
     for epoch in range(EPOCHS):
         random.shuffle(sig_train)
         random.shuffle(bkg_train)
+        assert len(sig_files) == len(bkg_files), f"Mismatch: {len(sig_files)} sig vs {len(bkg_files)} bkg chunks"
         train_files = list(zip(sig_train, bkg_train))
         # Train
         t_loss, t_acc, t_auc = run_epoch(model, train_files, device, criterion, optimizer)

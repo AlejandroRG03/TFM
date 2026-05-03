@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear, Embedding, Sequential, ReLU, BatchNorm1d
+from torch.nn import Linear, Embedding, Sequential, ReLU, BatchNorm1d, Dropout
 from torch_geometric.nn import SAGEConv, global_mean_pool, global_max_pool
 import os
 import glob
@@ -58,16 +58,21 @@ class CODEXVetoGNN(torch.nn.Module):
         
         # 3. Graph Convolution layers (Message Passing)
         self.conv1 = SAGEConv(hidden_channels, hidden_channels) # message passing layer that updates node features based on neighbors, 64 -> 64
+        self.bn1   = BatchNorm1d(hidden_channels)
         self.conv2 = SAGEConv(hidden_channels, hidden_channels) # stack to allow the model to learn more complex relationships, 64 -> 64
+        self.bn2   = BatchNorm1d(hidden_channels)
         self.conv3 = SAGEConv(hidden_channels, hidden_channels)
+        self.bn3   = BatchNorm1d(hidden_channels)
         
         # 4. Final Classifier (MLP) after pooling
         # Concatenate mean pooling, max pooling, and global event attributes
         self.classifier = Sequential(                                   # Sequential MLP, layer of linear transformations, activations
             Linear(hidden_channels * 2 + global_dim, hidden_channels),  # input layer, dimension is the concatenation of mean pooling, max pooling, and global attributes, 131 -> 64
             ReLU(),
+            Dropout(0.3),  # Dropout for regularization
             Linear(hidden_channels, hidden_channels // 2),              # hidden layer, 64 -> 32
             ReLU(),
+            Dropout(0.3),
             Linear(hidden_channels // 2, 1) # Logit output for Binary Cross Entropy (one number because it's binary classification), 32 -> 1
         )
         # mean pooling and max pooling since we do not care about the hits themselves, but about the overall event, 
@@ -84,7 +89,7 @@ class CODEXVetoGNN(torch.nn.Module):
 
         x_cont, x_cat, edge_index, batch, global_attr = \
             data.x_cont, data.x_cat, data.edge_index, data.batch, data.global_attr
-
+        
         # Project module embedding and concatenate with continuous features
         emb = self.module_emb(x_cat)
         x = torch.cat([x_cont, emb], dim=-1)
@@ -92,9 +97,9 @@ class CODEXVetoGNN(torch.nn.Module):
         x = self.node_encoder(x) # initial encoding of node features, 24 -> 64
         
         # Message Passing layers
-        x = self.conv1(x, edge_index).relu() # relu activation after each convolution to introduce non-linearity, 64 -> 64
-        x = self.conv2(x, edge_index).relu()
-        x = self.conv3(x, edge_index).relu() # further refine node features by aggregating information from neighbors, 64 -> 64
+        x = self.bn1(self.conv1(x, edge_index)).relu() # relu activation after each convolution to introduce non-linearity, 64 -> 64
+        x = self.bn2(self.conv2(x, edge_index)).relu()
+        x = self.bn3(self.conv3(x, edge_index)).relu() # further refine node features by aggregating information from neighbors, 64 -> 64
         
         # Global Pooling (Readout)
         # Obtain a vector representation for each graph (event) in the batch
@@ -102,6 +107,6 @@ class CODEXVetoGNN(torch.nn.Module):
         pool_max = global_max_pool(x, batch) # max of node features for each graph, captures the most salient features across the graph
         
         # Concatenate global context (e.g., nVtx, nClu, nTrk)
-        out = torch.cat([pool_mean, pool_max, global_attr], dim=-1)
+        out = torch.cat([pool_mean, pool_max, global_attr], dim=-1) # dim=-1 means concatenate along the last dimension
         
         return self.classifier(out) # classify given the aggregated graph representation, output is a logit for binary classification
