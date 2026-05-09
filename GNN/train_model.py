@@ -86,7 +86,7 @@ def split_chunk_data(data_list, is_train, split_ratio=0.8, seed=42):
 def run_epoch(model, loader_files, device, criterion, optimizer=None):
     """Runs a single epoch of training or validation."""
     is_train = optimizer is not None
-    model.train() if is_train else model.eval()
+    model.train() if is_train else model.eval() # val results may be better since we have dropout
     
     total_loss, total_graphs = 0, 0
     y_true, y_prob = [], []
@@ -177,7 +177,7 @@ def train():
     epochs_no_improve = 0
     
     for epoch in range(EPOCHS):
-
+        print(f"\nEpoch {epoch+1}/{EPOCHS}:")
         t0_epoch = time.time()
 
         random.shuffle(paired_files)
@@ -191,7 +191,7 @@ def train():
         # Logging
 
         t_epoch = time.time() - t0_epoch
-        print(f"\nEpoch {epoch+1}/{EPOCHS} - Time: {int(t_epoch // 3600)}h {int(t_epoch % 3600 // 60)}m {int(t_epoch % 60)}s")
+        print(f"  Epoch time: {int(t_epoch // 3600)}h {int(t_epoch % 3600 // 60)}m {int(t_epoch % 60)}s")
         print(f"  Train | Loss: {t_loss:.4f} | Acc: {t_acc:.4f} | AUC: {t_auc:.4f}")
         print(f"  Val   | Loss: {v_loss:.4f} | Acc: {v_acc:.4f} | AUC: {v_auc:.4f}")
 

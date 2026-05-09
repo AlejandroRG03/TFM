@@ -56,13 +56,15 @@ class CODEXVetoGNN(torch.nn.Module):
             ReLU()                                                    # Activation function 
         )
         
-        # 3. Graph Convolution layers (Message Passing)
-        self.conv1 = SAGEConv(hidden_channels, hidden_channels) # message passing layer that updates node features based on neighbors, 64 -> 64
+        # 3. Graph Convolution layers (Message Passing) with 4 Layers and Residual Connections
+        self.conv1 = SAGEConv(hidden_channels, hidden_channels) # SAGEConv is much faster and memory-efficient than GAT
         self.bn1   = BatchNorm1d(hidden_channels)
-        self.conv2 = SAGEConv(hidden_channels, hidden_channels) # stack to allow the model to learn more complex relationships, 64 -> 64
+        self.conv2 = SAGEConv(hidden_channels, hidden_channels) 
         self.bn2   = BatchNorm1d(hidden_channels)
         self.conv3 = SAGEConv(hidden_channels, hidden_channels)
         self.bn3   = BatchNorm1d(hidden_channels)
+        self.conv4 = SAGEConv(hidden_channels, hidden_channels)
+        self.bn4   = BatchNorm1d(hidden_channels)
         
         # 4. Final Classifier (MLP) after pooling
         # Concatenate mean pooling, max pooling, and global event attributes
@@ -96,10 +98,22 @@ class CODEXVetoGNN(torch.nn.Module):
         
         x = self.node_encoder(x) # initial encoding of node features, 24 -> 64
         
-        # Message Passing layers
-        x = self.bn1(self.conv1(x, edge_index)).relu() # relu activation after each convolution to introduce non-linearity, 64 -> 64
+        # Message Passing layers with residual connections (skip connections)
+        x_res = x # residual connection, this helps the gradient flow through the network and prevents vanishing gradients
+        x = self.bn1(self.conv1(x, edge_index)).relu() 
+        x = x + x_res
+        
+        x_res = x
         x = self.bn2(self.conv2(x, edge_index)).relu()
-        x = self.bn3(self.conv3(x, edge_index)).relu() # further refine node features by aggregating information from neighbors, 64 -> 64
+        x = x + x_res
+        
+        x_res = x
+        x = self.bn3(self.conv3(x, edge_index)).relu()
+        x = x + x_res
+        
+        x_res = x
+        x = self.bn4(self.conv4(x, edge_index)).relu()
+        x = x + x_res
         
         # Global Pooling (Readout)
         # Obtain a vector representation for each graph (event) in the batch

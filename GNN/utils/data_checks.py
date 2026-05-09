@@ -37,8 +37,11 @@ eta_max = -np.log(np.tan(theta_min/2))
 
 # --- load the data ---
 DATA_PATH = "/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/"
-BKG_FILE = f"{DATA_PATH}ntuple_background_38000800.root"
-BKG_LABEL = "KL0"
+BKG_LABEL = "MUON"
+
+
+DEC_ID    = "38000800" if BKG_LABEL == "KL0" else "30011001"
+BKG_FILE = f"{DATA_PATH}ntuple_background_{DEC_ID}.root"
 SIG_FILE = f"{DATA_PATH}ntuple_signal_40114060.root"
 
 VAR_NAMES = ['bxType', 'eventNumber', 'bxId', 'gpsTime', 'runNumber', 'triggerType', 'eventType', 
@@ -73,6 +76,18 @@ bkg_df['in_codex'] = (bkg_df['eta'] >= eta_min) & (bkg_df['eta'] <= eta_max) & (
 sig_df['in_codex'] = (sig_df['eta'] >= eta_min) & (sig_df['eta'] <= eta_max) & (sig_df['phi'] >= phi_min) & (sig_df['phi'] <= phi_max)
 
 # global event variables
+
+def aligned_hits_per_event(df_group, eta_width, phi_width):
+    """
+    Computes the number of "aligned" hits per event in the CODEX region
+    """
+    if df_group.empty:
+        return 0
+    counts, bins = np.histogramdd(df_group[['eta', 'phi']].values, bins=[np.arange(eta_min, eta_max+eta_width, eta_width), np.arange(phi_min, phi_max+phi_width, phi_width)])
+    return (counts > 1).sum()  # Count bins with more than 2 hits
+
+
+
 def extract_event_features(df):
     """
     Extracts event-level features by grouping hit-level data by eventNumber.
@@ -84,6 +99,9 @@ def extract_event_features(df):
     df_codex = df[df['in_codex']]
     grouped_codex = df_codex.groupby('eventNumber')
 
+    eta_width = 0.01
+    phi_width = 0.01  # ~10 mrad
+
     return pd.DataFrame({
         'nTrk': grouped['nTrk_per_event'].first(),
         'nVtx': grouped['nVtx_per_event'].first(),
@@ -94,10 +112,16 @@ def extract_event_features(df):
         'mean_codex_angle_per_event': grouped['codex_angle'].mean(),
 
         'sum_npix_codex': grouped_codex['n_pix'].sum(),
+        'mean_npix_codex': grouped_codex['n_pix'].mean(),
+        'max_npix_codex': grouped_codex['n_pix'].max(),
         
         # Qué tan "juntos" están los hits (proxy de si forman una traza)
         'std_eta_codex': grouped_codex['eta'].std(),
-        'std_phi_codex': grouped_codex['phi'].std()
+        'std_phi_codex': grouped_codex['phi'].std(),
+
+        # aligned hits per event in codex
+        'aligned_hits_codex': grouped_codex.apply(lambda g: aligned_hits_per_event(g, eta_width=eta_width, phi_width=phi_width)),
+        'aligned_hits_fraction_codex': grouped_codex.apply(lambda g: aligned_hits_per_event(g, eta_width=eta_width, phi_width=phi_width) / len(g) if len(g) > 0 else 0)
     })
 
 bkg_event_df = extract_event_features(bkg_df)
@@ -215,6 +239,14 @@ plot_1d_comparison(bkg_event_df[mask_bkg]['sum_npix_codex'], sig_event_df[mask_s
                    'Total n_pix deposited in Codex region per Event', 'Sum of n_pix', 'sum_npix_codex.png',
                    density=True, is_discrete=True, window=(0, 50))
 
+plot_1d_comparison(bkg_event_df[mask_bkg]['mean_npix_codex'], sig_event_df[mask_sig]['mean_npix_codex'], 
+                   'Mean n_pix deposited in Codex region per Event', 'Mean n_pix', 'mean_npix_codex.png',
+                   density=True, is_discrete=True, window=(0, 10))
+
+plot_1d_comparison(bkg_event_df[mask_bkg]['max_npix_codex'], sig_event_df[mask_sig]['max_npix_codex'], 
+                   'Max n_pix deposited in Codex region per Event', 'Max n_pix', 'max_npix_codex.png',
+                   density=True, is_discrete=True, window=(0, 20))
+
 # angular dispersion of hits in codex
 plot_1d_comparison(bkg_event_df[mask_bkg]['std_eta_codex'], sig_event_df[mask_sig]['std_eta_codex'], 
                    'Spread (Std) of Eta for hits per Event in Codex', 'Std Eta', 'std_eta_codex.png',
@@ -234,3 +266,12 @@ plot_1d_comparison(bkg_event_df['nVtx'], sig_event_df['nVtx'],
 plot_1d_comparison(bkg_event_df['nClu'], sig_event_df['nClu'], 
                    'Number of Clusters per Event', 'nClu', 'nClu_per_event.png',
                    density=True, window=(0, 5000))
+
+# aligned hits in codex per event
+plot_1d_comparison(bkg_event_df[mask_bkg]['aligned_hits_codex'], sig_event_df[mask_sig]['aligned_hits_codex'], 
+                   'Number of Aligned Hits in Codex per Event', 'Aligned Hits', 'aligned_hits_codex.png',
+                   density=True, is_discrete=True, window=(0, 10), logy=True)
+
+plot_1d_comparison(bkg_event_df[mask_bkg]['aligned_hits_fraction_codex'], sig_event_df[mask_sig]['aligned_hits_fraction_codex'], 
+                   'Fraction of Aligned Hits in Codex per Event', 'Aligned Hits Fraction', 'aligned_hits_fraction_codex.png',
+                   density=True, bins=20, window=(0, 1), logy=True) # of hits in codex, how many are aligned?
