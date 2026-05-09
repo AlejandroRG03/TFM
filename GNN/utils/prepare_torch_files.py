@@ -11,9 +11,13 @@ from concurrent.futures import ThreadPoolExecutor
 # ==============================================================================
 # MAIN CONFIGURATION
 # ==============================================================================
-INPUT_FILE_NAME = "ntuple_signal_40114060.root"
-IS_SIGNAL = 1
-DEC_ID    = "40114060"
+LABEL           = "KL0" # MUON, KL0, or SIGNAL
+
+#muon, 30011001 (bkg); KL0, 38000800 (bkg); signal, 40114060
+IS_SIGNAL       = 0 if LABEL in ["MUON", "KL0"] else 1
+DEC_ID          = "30011001" if LABEL == "MUON" else "38000800" if LABEL == "KL0" else "SIGNAL"
+INPUT_FILE_NAME = "ntuple_background_30011001.root"
+INPUT_FILE_NAME = "ntuple_" + ("signal_40114060.root" if IS_SIGNAL else f"background_{DEC_ID}.root")
 
 INPUT_FILE_PATH = "/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/"
 OUTPUT_DIR      = "/lustre/LHCb/alejandro.rodriguez/torch_data"
@@ -88,7 +92,10 @@ def prepare_torch_files():
     data_type = "signal" if IS_SIGNAL else "background"
     specific_output_dir = os.path.join(OUTPUT_DIR, data_type, DEC_ID)
     os.makedirs(specific_output_dir, exist_ok=True)
-    print(f"Starting processing from: {FULL_PATH}")
+    print(f"Starting processing from: {FULL_PATH} -> {LABEL}")
+    print(f"Output directory: {specific_output_dir}")
+    print(f"Building graphs with K={K_NEIGHBOURS} neighbors using {N_WORKERS} parallel threads...")
+    print(f"Graph features:\n Event: {cont_cols} (normalized), \n Global: {global_cols} (normalized),\n Categorical: module (categorical)")
 
     chunk_counter = 0
     total_events = 0

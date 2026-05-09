@@ -1,4 +1,5 @@
 import sys
+import os
 sys.path.append("/home3/alejandro.rodriguez/python_modules")
 
 from functions import *
@@ -36,7 +37,8 @@ eta_max = -np.log(np.tan(theta_min/2))
 
 # --- load the data ---
 DATA_PATH = "/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/"
-BKG_FILE = f"{DATA_PATH}ntuple_background_38011800.root"
+BKG_FILE = f"{DATA_PATH}ntuple_background_38000800.root"
+BKG_LABEL = "KL0"
 SIG_FILE = f"{DATA_PATH}ntuple_signal_40114060.root"
 
 VAR_NAMES = ['bxType', 'eventNumber', 'bxId', 'gpsTime', 'runNumber', 'triggerType', 'eventType', 
@@ -126,8 +128,8 @@ def plot_eta_phi(bkg, sig, zoomed=False):
     h_bkg, x_e, y_e = np.histogram2d(bkg['eta'], bkg['phi'], bins=bins, range=range_lims)
     h_sig, _, _ = np.histogram2d(sig['eta'], sig['phi'], bins=[x_e, y_e])
     pcm = ax3.pcolormesh(x_e, y_e, (h_sig - h_bkg).T, cmap='seismic', shading='auto')
-    
-    for ax, title in zip([ax1, ax2, ax3], ['Background', 'Signal', 'Residuals (Sig-Bkg)']):
+
+    for ax, title in zip([ax1, ax2, ax3], [f'Background ({BKG_LABEL})', 'Signal', 'Residuals (Sig-Bkg)']):
         ax.set_title(f"{title} (eta, phi) {'- Zoomed' if zoomed else ''}")
         ax.set_xlabel(r'$\eta$'); ax.set_ylabel(r'$\phi$')
         if not zoomed:
@@ -140,6 +142,10 @@ def plot_eta_phi(bkg, sig, zoomed=False):
     suffix = "_zoomed" if zoomed else ""
     plt.savefig(f"check_plots/eta_phi{suffix}.png")
     plt.close()
+
+
+# Nos aseguramos de que el directorio de salida existe
+os.makedirs("check_plots", exist_ok=True)
 
 plot_eta_phi(bkg_df, sig_df, zoomed=False)
 plot_eta_phi(bkg_df, sig_df, zoomed=True)
@@ -167,8 +173,8 @@ def plot_1d_comparison(bkg_data, sig_data, title, xlabel, filename, density=True
         bins = np.arange(min_val - 0.5, max_val + 1.5, 1)
 
     # Ploteamos con histtype='step' normal, pero ahora 'bins' puede ser el array que acabamos de crear
-    plt.hist(bkg_data, bins=bins, histtype='step', color='red', label='Background', density=density, range=window, linewidth=1.5)
-    plt.hist(sig_data, bins=bins, histtype='step', color='blue', label='Signal', density=density, range=window, linewidth=1.5)
+    plt.hist(bkg_data, bins=bins, histtype='step', color='red', label=f'Background ({BKG_LABEL})', density=density, range=window, linewidth=1.5)
+    plt.hist(sig_data, bins=bins, histtype='step', color='blue', label='Signal (LLP)', density=density, range=window, linewidth=1.5)
     
     if logx: plt.xscale('log')
     if logy: plt.yscale('log')
@@ -194,7 +200,7 @@ plot_1d_comparison(bkg_event_df['hits_in_codex'], sig_event_df['hits_in_codex'],
 # multiplicity per event
 plot_1d_comparison(bkg_event_df['total_hits'], sig_event_df['total_hits'], 
                    'Total VELO Hits per Event', 'Hits', 'total_hits_per_event.png',
-                   density=True, is_discrete=True, window=(0, 5000)) # Ajusta la ventana
+                   density=True, is_discrete=False, window=(0, 5000)) # Ajusta la ventana
 # fraction of hits in codex per event
 plot_1d_comparison(bkg_event_df['fraction_hits_in_codex'].dropna(), sig_event_df['fraction_hits_in_codex'].dropna(), 
                    'Fraction of Hits in Codex', 'Fraction', 'fraction_in_codex.png',

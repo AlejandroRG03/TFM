@@ -9,6 +9,11 @@ from codex_gnn_model import CODEXVetoGNN
 import itertools
 import numpy as np
 from sklearn.metrics import roc_auc_score, accuracy_score
+import time
+import warnings
+from tqdm import tqdm
+
+#warnings.filterwarnings("ignore", message=".*torch-scatter.*")
 
 print(f"--> CUDA? {torch.cuda.is_available()}")
 # ==============================================================================
@@ -26,19 +31,20 @@ def set_seed(seed):
 
 DATA_DIR = "/lustre/LHCb/alejandro.rodriguez/torch_data"
 
+BKG_TYPE = "MUON" # "MUON" or "KL0"
 # for dec ids, use list in case we change the approach to multi-class classification, for now only one type of signal and one type of background
 # WARNING: if we want to do multi-class classification, we need to change the model output layer and the loss function accordingly!
-SIGNAL_DEC_IDS      = ["40114060"] 
-BACKGROUND_DEC_IDS  = ["38011800"]
+SIGNAL_DEC_IDS      = ["40114060"] # 40114060 signal
+BACKGROUND_DEC_IDS  = ["30011001" if BKG_TYPE == "MUON" else "38000800"] # 30011001 (MUON), 38000800 (KL0)
 
-OUTPUT_NAME = f"S{SIGNAL_DEC_IDS[0]}_B{BACKGROUND_DEC_IDS[0]}"
+OUTPUT_NAME = f"{BKG_TYPE}_CODEX_GNN"
 
 BATCH_SIZE    = 256
-EPOCHS        = 20
+EPOCHS        = 100    # We have implemented early stopping, use a large number
 LEARNING_RATE = 1e-3
-MAX_CHUNKS    = 2      # Set to None to use all data
+MAX_CHUNKS    = None      # Set to None to use all data
 TRAIN_SPLIT   = 0.8
-PATIENCE      = 10
+PATIENCE      = 5
 
 # ==============================================================================
 # HELPER FUNCTIONS
@@ -63,6 +69,20 @@ def get_paired_files(sig_list, bkg_list):
     else:
         return list(zip(itertools.cycle(sig_list), bkg_list))
 
+def split_chunk_data(data_list, is_train, split_ratio=0.8, seed=42):
+    """
+    Deterministically splits the internal list of graphs within the chunk.
+    Since the seed is fixed (42), the split will be identical in each epoch.
+    """
+    gen = random.Random(seed)
+    indices = list(range(len(data_list)))
+    gen.shuffle(indices)
+    
+    split_idx = int(split_ratio * len(data_list))
+    target_indices = indices[:split_idx] if is_train else indices[split_idx:]
+    
+    return [data_list[i] for i in target_indices]
+
 def run_epoch(model, loader_files, device, criterion, optimizer=None):
     """Runs a single epoch of training or validation."""
     is_train = optimizer is not None
@@ -72,9 +92,25 @@ def run_epoch(model, loader_files, device, criterion, optimizer=None):
     y_true, y_prob = [], []
 
     # loader_files is a list of tuples (sig_file, bkg_file)
-    for sig_file, bkg_file in loader_files:
-        combined_data = torch.load(sig_file, weights_only=False) + torch.load(bkg_file, weights_only=False)
-        loader = DataLoader(combined_data, batch_size=BATCH_SIZE, shuffle=is_train, num_workers=4)
+    desc_text = "Training" if is_train else "Validating "
+    for sig_file, bkg_file in tqdm(loader_files, desc=desc_text, leave=False, unit="chunk"):
+
+        # load chunk data
+        sig_data = torch.load(sig_file, weights_only=False)
+        bkg_data = torch.load(bkg_file, weights_only=False)
+        
+        # SPLIT at graph level within the chunk, not at file level, to ensure consistent training/validation sets across epochs
+        sig_data = split_chunk_data(sig_data, is_train, TRAIN_SPLIT)
+        bkg_data = split_chunk_data(bkg_data, is_train, TRAIN_SPLIT)
+        
+        combined_data = sig_data + bkg_data
+        
+        if len(combined_data) == 0:
+            continue
+
+        for data in combined_data: data.num_nodes = data.x_cont.size(0)
+
+        loader = DataLoader(combined_data, batch_size=BATCH_SIZE, shuffle=is_train, num_workers=16, pin_memory=True)
 
         for batch in loader:
             batch = batch.to(device)
@@ -114,7 +150,7 @@ def train():
     # 1. Data Preparation
     sig_files = get_files(DATA_DIR, SIGNAL_DEC_IDS, "signal")
     bkg_files = get_files(DATA_DIR, BACKGROUND_DEC_IDS, "background")
-
+    
     if not sig_files or not bkg_files:
         print("[ERROR] No data files found.")
         return
@@ -125,20 +161,14 @@ def train():
     random.shuffle(sig_files)
     random.shuffle(bkg_files)
 
-    n_train_sig = max(1, int(TRAIN_SPLIT * len(sig_files)))
-    n_train_bkg = max(1, int(TRAIN_SPLIT * len(bkg_files)))
+    paired_files = get_paired_files(sig_files, bkg_files)
 
-    sig_train = sig_files[:n_train_sig]
-    bkg_train = bkg_files[:n_train_bkg]
-
-    val_files   = get_paired_files(sig_files[n_train_sig:], bkg_files[n_train_bkg:])
-
-    print(f"--> Dataset: {len(sig_train)} train chunks, {len(val_files)} val chunks")
+    print(f"--> Dataset: {len(paired_files)} train chunk pairs")
     
 
     # 2. Model, Loss, Optimizer
     model = CODEXVetoGNN().to(device)
-    pos_weight = torch.tensor([n_train_sig / n_train_bkg]).to(device)
+    pos_weight = torch.tensor([float(len(bkg_files)) / max(1, len(sig_files))]).to(device)
     criterion  = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer  = Adam(model.parameters(), lr=LEARNING_RATE)
 
@@ -147,18 +177,21 @@ def train():
     epochs_no_improve = 0
     
     for epoch in range(EPOCHS):
-        random.shuffle(sig_train)
-        random.shuffle(bkg_train)
 
-        train_files = get_paired_files(sig_train, bkg_train)
+        t0_epoch = time.time()
+
+        random.shuffle(paired_files)
+
         # Train
-        t_loss, t_acc, t_auc = run_epoch(model, train_files, device, criterion, optimizer)
+        t_loss, t_acc, t_auc = run_epoch(model, paired_files, device, criterion, optimizer)
         
         # Validation
-        v_loss, v_acc, v_auc = run_epoch(model, val_files, device, criterion)
+        v_loss, v_acc, v_auc = run_epoch(model, paired_files, device, criterion)
 
         # Logging
-        print(f"\nEpoch {epoch+1}/{EPOCHS}")
+
+        t_epoch = time.time() - t0_epoch
+        print(f"\nEpoch {epoch+1}/{EPOCHS} - Time: {int(t_epoch // 3600)}h {int(t_epoch % 3600 // 60)}m {int(t_epoch % 60)}s")
         print(f"  Train | Loss: {t_loss:.4f} | Acc: {t_acc:.4f} | AUC: {t_auc:.4f}")
         print(f"  Val   | Loss: {v_loss:.4f} | Acc: {v_acc:.4f} | AUC: {v_auc:.4f}")
 
@@ -177,4 +210,9 @@ def train():
             break
 
 if __name__ == "__main__":
+
+    start_time = time.time()
     train()
+    end_time = time.time()
+    t = end_time - start_time
+    print(f"\nTotal training time: {int(t / 3600)} h {int(t % 3600 / 60)} min {int(t % 60)} s")
