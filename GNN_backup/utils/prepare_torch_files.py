@@ -2,10 +2,10 @@ import sys
 sys.path.append("/home3/alejandro.rodriguez/python_modules")
 
 from functions import *
-import time
 import json
 import torch
 from torch_geometric.data import Data
+from torch_geometric.nn import knn_graph
 from concurrent.futures import ThreadPoolExecutor
 
 # ==============================================================================
@@ -15,7 +15,8 @@ LABEL           = "KL0" # MUON, KL0, or SIGNAL
 
 #muon, 30011001 (bkg); KL0, 38000800 (bkg); signal, 40114060
 IS_SIGNAL       = 0 if LABEL in ["MUON", "KL0"] else 1
-DEC_ID          = "30011001" if LABEL == "MUON" else "38000800" if LABEL == "KL0" else "40114060"
+DEC_ID          = "30011001" if LABEL == "MUON" else "38000800" if LABEL == "KL0" else "SIGNAL"
+INPUT_FILE_NAME = "ntuple_background_30011001.root"
 INPUT_FILE_NAME = "ntuple_" + ("signal_40114060.root" if IS_SIGNAL else f"background_{DEC_ID}.root")
 
 INPUT_FILE_PATH = "/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/"
@@ -69,12 +70,16 @@ def process_event(args):
     x_cat = torch.tensor(df_event['module'].values, dtype=torch.long)
     # Global event-level attributes
     global_attr = torch.tensor(df_event[global_cols].iloc[0].values, dtype=torch.float).unsqueeze(0)
+    # Coordinates for graph construction (k-NN in eta-phi-z space)
+    coords = torch.tensor(df_event[['eta', 'phi', 'z']].values, dtype=torch.float)
+    edge_index = knn_graph(coords, k=K_NEIGHBOURS, loop=False)
     # Label
     y = torch.tensor([IS_SIGNAL], dtype=torch.float)
 
     return Data(
         x_cont=x_cont, 
         x_cat=x_cat,
+        edge_index=edge_index,
         y=y,
         global_attr=global_attr,
         event_id=torch.tensor([event_id], dtype=torch.long),
@@ -100,8 +105,7 @@ def prepare_torch_files():
 
     # Iterate in chunks to manage memory usage
     for chunk in uproot.iterate(FULL_PATH, VAR_NAMES, step_size="100 MB", library="pd"):
-        
-        t0 = time.time()
+
         # --- 0. HANDLE LEFTOVER FROM PREVIOUS CHUNK ---
 
         if not leftover_df.empty:
@@ -143,8 +147,7 @@ def prepare_torch_files():
         chunk_filename = os.path.join(specific_output_dir, f"graphs_{chunk_counter}.pt")
         if chunk_data_list:
             torch.save(chunk_data_list, chunk_filename)
-            t = time.time() - t0
-            print(f"Saved chunk {chunk_counter}: {len(chunk_data_list)} events (Total: {total_events})  -  Time: {t//60:.0f} min {t%60:.0f} s)")
+            print(f"Saved chunk {chunk_counter}: {len(chunk_data_list)} events (Total: {total_events})")
         else:
             print(f"Chunk {chunk_counter} contained no valid events.")
 
@@ -163,7 +166,6 @@ def prepare_torch_files():
             total_events += 1 
             print(f"Saved final leftover event (Total: {total_events})")
 
- 
     print(f"\nProcessing completed! {total_events} graphs ready in {specific_output_dir}")
 
 if __name__ == "__main__":

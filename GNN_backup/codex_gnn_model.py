@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear, Embedding, Sequential, SiLU, LayerNorm, Dropout
-from torch_geometric.nn import GATv2Conv, GlobalAttention, global_max_pool, global_mean_pool, knn_graph
+from torch.nn import Linear, Embedding, Sequential, ReLU, BatchNorm1d, Dropout
+from torch_geometric.nn import SAGEConv, global_mean_pool, global_max_pool
 import os
 import glob
 from torch.utils.data import Dataset
@@ -52,37 +52,28 @@ class CODEXVetoGNN(torch.nn.Module):
         # x_cont: x, y, z, r_T, phi, eta, n_pix, codex_angle
         self.node_encoder = Sequential(
             Linear(n_cont_features + embedding_dim, hidden_channels), # project concatenated features to hidden dimension, 24 -> 64, linear means y = ax + b
-            LayerNorm(hidden_channels),                             # normalize the features
-            SiLU()                                                    # Activation function 
+            BatchNorm1d(hidden_channels),                             # normalize the features
+            ReLU()                                                    # Activation function 
         )
         
-        # 3. Graph Convolution layers (Message Passing) with 3 Layers of Attention and Residual Connections
-        # GATv2Conv with 4 heads. Output dimension per head is hidden_channels // 4 to maintain scalability and avoid bottlenecks.
-        head_dim = hidden_channels // 4
+        # 3. Graph Convolution layers (Message Passing) with 4 Layers and Residual Connections
+        self.conv1 = SAGEConv(hidden_channels, hidden_channels) # SAGEConv is much faster and memory-efficient than GAT
+        self.bn1   = BatchNorm1d(hidden_channels)
+        self.conv2 = SAGEConv(hidden_channels, hidden_channels) 
+        self.bn2   = BatchNorm1d(hidden_channels)
+        self.conv3 = SAGEConv(hidden_channels, hidden_channels)
+        self.bn3   = BatchNorm1d(hidden_channels)
+        self.conv4 = SAGEConv(hidden_channels, hidden_channels)
+        self.bn4   = BatchNorm1d(hidden_channels)
         
-        self.conv1 = GATv2Conv(hidden_channels, head_dim, heads=4, concat=True, edge_dim=3)
-        self.ln1   = LayerNorm(hidden_channels)
-        self.conv2 = GATv2Conv(hidden_channels, head_dim, heads=4, concat=True, edge_dim=3)
-        self.ln2   = LayerNorm(hidden_channels)
-        self.conv3 = GATv2Conv(hidden_channels, head_dim, heads=4, concat=True, edge_dim=3)
-        self.ln3   = LayerNorm(hidden_channels)
-        
-        # 4. Global Attention Pooling
-        gate_nn = Sequential(
-            Linear(hidden_channels, hidden_channels // 2),
-            SiLU(),
-            Linear(hidden_channels // 2, 1)
-        )
-        self.global_pool = GlobalAttention(gate_nn)
-        
-        # 5. Final Classifier (MLP) after pooling
-        # Concatenate attention, max, and mean pooling with global event attributes
+        # 4. Final Classifier (MLP) after pooling
+        # Concatenate mean pooling, max pooling, and global event attributes
         self.classifier = Sequential(                                   # Sequential MLP, layer of linear transformations, activations
-            Linear(hidden_channels * 3 + global_dim, hidden_channels),  # input layer
-            SiLU(),
+            Linear(hidden_channels * 2 + global_dim, hidden_channels),  # input layer, dimension is the concatenation of mean pooling, max pooling, and global attributes, 131 -> 64
+            ReLU(),
             Dropout(0.3),  # Dropout for regularization
             Linear(hidden_channels, hidden_channels // 2),              # hidden layer, 64 -> 32
-            SiLU(),
+            ReLU(),
             Dropout(0.3),
             Linear(hidden_channels // 2, 1) # Logit output for Binary Cross Entropy (one number because it's binary classification), 32 -> 1
         )
@@ -98,8 +89,8 @@ class CODEXVetoGNN(torch.nn.Module):
         and global_attr (global event-level attributes).
         """
 
-        x_cont, x_cat, batch, global_attr = \
-            data.x_cont, data.x_cat, data.batch, data.global_attr
+        x_cont, x_cat, edge_index, batch, global_attr = \
+            data.x_cont, data.x_cat, data.edge_index, data.batch, data.global_attr
         
         # Project module embedding and concatenate with continuous features
         emb = self.module_emb(x_cat)
@@ -107,36 +98,29 @@ class CODEXVetoGNN(torch.nn.Module):
         
         x = self.node_encoder(x) # initial encoding of node features, 24 -> 64
         
-        # Generate the physical k-NN graph dynamically on the fly
-        # Indices in x_cont: 0 -> x, 1 -> y, 2 -> z
-        # We use x, y, z because LLPs displaced tracks do not originate from the primary vertex,
-        # so eta/phi are not conserved along the track. x, y, z preserves Euclidean straight lines.
-        coords = x_cont[:, :3]
-        edge_index = knn_graph(coords, k=8, batch=batch, loop=False)
-        
-        # Explicit Track Vectors: compute difference between connected hits
-        edge_attr = coords[edge_index[0]] - coords[edge_index[1]]
-
         # Message Passing layers with residual connections (skip connections)
-        x_res = x 
-        x = self.ln1(self.conv1(x, edge_index, edge_attr=edge_attr))
-        x = F.silu(x + x_res)
+        x_res = x # residual connection, this helps the gradient flow through the network and prevents vanishing gradients
+        x = self.bn1(self.conv1(x, edge_index)).relu() 
+        x = x + x_res
         
         x_res = x
-        x = self.ln2(self.conv2(x, edge_index, edge_attr=edge_attr))
-        x = F.silu(x + x_res)
+        x = self.bn2(self.conv2(x, edge_index)).relu()
+        x = x + x_res
         
         x_res = x
-        x = self.ln3(self.conv3(x, edge_index, edge_attr=edge_attr))
-        x = F.silu(x + x_res)
-
+        x = self.bn3(self.conv3(x, edge_index)).relu()
+        x = x + x_res
+        
+        x_res = x
+        x = self.bn4(self.conv4(x, edge_index)).relu()
+        x = x + x_res
+        
         # Global Pooling (Readout)
         # Obtain a vector representation for each graph (event) in the batch
-        pool_att = self.global_pool(x, batch) # attention-weighted sum of nodes
+        pool_mean = global_mean_pool(x, batch) # average of node features for each graph, captures overall trend of features across the graph
         pool_max = global_max_pool(x, batch) # max of node features for each graph, captures the most salient features across the graph
-        pool_mean = global_mean_pool(x, batch) # average of node features
         
         # Concatenate global context (e.g., nVtx, nClu, nTrk)
-        out = torch.cat([pool_att, pool_max, pool_mean, global_attr], dim=-1) # dim=-1 means concatenate along the last dimension
+        out = torch.cat([pool_mean, pool_max, global_attr], dim=-1) # dim=-1 means concatenate along the last dimension
         
         return self.classifier(out) # classify given the aggregated graph representation, output is a logit for binary classification
