@@ -31,16 +31,17 @@ BACKGROUND_DEC_IDS = ["30011001" if BKG_TYPE == "MUON" else "38000800"]
 
 OUTPUT_NAME   = f"{BKG_TYPE}_CODEX_GNN"
 
-BATCH_SIZE    = 256
+BATCH_SIZE    = 128  # Adjusted for V2 model complexity
 EPOCHS        = 100
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 5e-4
+K_NEIGHBOURS  = 8
 
 # LIMIT CHUNKS FOR QUICK TESTS
-MAX_CHUNKS    = 5  # Set to None to train with all data
+MAX_CHUNKS    = 10  # Set to None to train with all data
 TRAIN_SPLIT   = 0.8
 PATIENCE      = 5
-NUM_WORKERS   = 4
-USE_MULTI_GPU = False # Set to True to use all available GPUs with DDP
+NUM_WORKERS   = 8
+USE_MULTI_GPU = True # Set to True to use all available GPUs with DDP
 
 # ==============================================================================
 # HELPER FUNCTIONS
@@ -162,12 +163,16 @@ def train():
     train_dataset = ChunkIterableDataset(paired_files, is_train=True, train_split=TRAIN_SPLIT)
     val_dataset = ChunkIterableDataset(paired_files, is_train=False, train_split=TRAIN_SPLIT)
 
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, persistent_workers=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, persistent_workers=True)
 
-    # 4. Initialize Model
     pos_weight_val = float(len(bkg_files)) / max(1, len(sig_files))
-    model = CODEXLightning(pos_weight_val=pos_weight_val, learning_rate=LEARNING_RATE)
+    model = CODEXLightning(pos_weight_val=pos_weight_val, learning_rate=LEARNING_RATE, k=K_NEIGHBOURS)
+    
+    # 4.5 Apply torch.compile for massive kernel fusion speedup (PyTorch 2.0+)
+    # if hasattr(torch, "compile"):
+    #     print("--> Enabling torch.compile()...")
+    #     model = torch.compile(model)
 
     # 5. Set up Callbacks
     early_stop_callback = EarlyStopping(
@@ -187,6 +192,9 @@ def train():
         mode="min"
     )
 
+    lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
+
+
     # 6. Initialize PyTorch Lightning Trainer
     if USE_MULTI_GPU and torch.cuda.is_available():
         devices_config = "auto"
@@ -200,7 +208,8 @@ def train():
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=devices_config,
         strategy=strategy_config,
-        callbacks=[early_stop_callback, checkpoint_callback]
+        precision="16-mixed",  # Highly optimized training
+        callbacks=[early_stop_callback, checkpoint_callback, lr_monitor]
     )
 
     # 7. Train

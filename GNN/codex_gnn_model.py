@@ -1,142 +1,118 @@
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear, Embedding, Sequential, SiLU, LayerNorm, Dropout
-from torch_geometric.nn import GATv2Conv, GlobalAttention, global_max_pool, global_mean_pool, knn_graph
+from torch.nn import Linear, Embedding, Sequential, SiLU, LayerNorm, Dropout, ModuleList
+from torch_geometric.nn import GATv2Conv, aggr, global_max_pool, global_mean_pool, knn_graph
 import os
 import glob
 from torch.utils.data import Dataset
 from torch_geometric.loader import DataLoader
 
-
-"""
-Problem statement:
-
-Based on the information of the hits in the VELO subdetector, we want to classify 
-the events that contain signal pointing towards CODEX-b, and the events that contain
-background pointing towards CODEX-b.
-
-We will use a Graph Neural Network (GNN) for this task, since they are capable of 
-understanding tracking information and spatial relationships between hits.
-
-In particular, we use knn_graph from pyTorch Geometric to construct the graph from the hit information,
-and then we will use a simple GNN architecture (e.g. Graph Convolutional Network)
- to perform the classification.
-"""
-
-
 class CODEXVetoGNN(torch.nn.Module):
-    def __init__(self, n_cont_features=8, n_modules=52, embedding_dim=16, hidden_channels=64, global_dim=3):
-
+    def __init__(self, n_cont_features=9, n_modules=52, embedding_dim=16, hidden_channels=128, global_dim=3, k=8, num_layers=5):
         """
-        :param n_cont_features: Number of continuous features per hit (e.g. x, y, z, r_T, phi, eta, n_pix, codex_angle)
-        :param n_modules: Number of unique module IDs (categorical feature for embedding), VELO has 52 modules
-        :param embedding_dim: Dimension of the module ID embedding, features that the model will learn to represent the module information
-        :param hidden_channels: Number of hidden units in the GNN layers, controls the capacity of the model to learn complex relationships. \
-        Each hit has associated a feature vector of size n_cont_features + embedding_dim after concatenating continuous features and module embedding. \
-        Using the node_encoder, we project this concatenated feature vector into a hidden space of dimension hidden_channels, which is the input dimension for the GNN layers.
-
-        :param global_dim: Dimension of the global event-level attributes (e.g. nVtx, nClu, nTrk)
+        Deep Track-Aware GNN (V2)
+        - Increased depth (5 layers)
+        - Increased capacity (128 channels, 4 heads)
+        - Robust residual stacks with LayerNorm
         """
-
         super(CODEXVetoGNN, self).__init__()
+        self.k = k
+        self.num_layers = num_layers
         
-        # 1. Embedding for the module ID (Categorical feature)
+        # 1. Embedding for the module ID
         self.module_emb = Embedding(n_modules + 1, embedding_dim)
-        # Explanation of Embeddings: module id is a categorical feature that indicates which module in the VELO detector the hit belongs to.
-        # using embeddings, we allow the model to transform this categorical information into a feature vector of size embedding_dim, wich
-        # enables the model to learn characteristics of the modules. For instance, this feature vector can be something like
-        # [is_inner_module, is_outer_module, module_position_along_z, ...], which can help the model to understand the spatial distribution of hits.
-
         
         # 2. Initial encoder for hit features
-        # x_cont: x, y, z, r_T, phi, eta, n_pix, codex_angle
         self.node_encoder = Sequential(
-            Linear(n_cont_features + embedding_dim, hidden_channels), # project concatenated features to hidden dimension, 24 -> 64, linear means y = ax + b
-            LayerNorm(hidden_channels),                             # normalize the features
-            SiLU()                                                    # Activation function 
+            Linear(n_cont_features + embedding_dim, hidden_channels),
+            LayerNorm(hidden_channels),
+            SiLU()
         )
         
-        # 3. Graph Convolution layers (Message Passing) with 3 Layers of Attention and Residual Connections
-        # GATv2Conv with 4 heads. Output dimension per head is hidden_channels // 4 to maintain scalability and avoid bottlenecks.
-        head_dim = hidden_channels // 4
+        # 2.5 Metric Learning MLP (Higher capacity for better topology)
+        self.metric_mlp = Sequential(
+            Linear(n_cont_features + embedding_dim, hidden_channels // 2),
+            SiLU(),
+            Linear(hidden_channels // 2, 8) # 8D latent space
+        )
         
-        self.conv1 = GATv2Conv(hidden_channels, head_dim, heads=4, concat=True, edge_dim=3)
-        self.ln1   = LayerNorm(hidden_channels)
-        self.conv2 = GATv2Conv(hidden_channels, head_dim, heads=4, concat=True, edge_dim=3)
-        self.ln2   = LayerNorm(hidden_channels)
-        self.conv3 = GATv2Conv(hidden_channels, head_dim, heads=4, concat=True, edge_dim=3)
-        self.ln3   = LayerNorm(hidden_channels)
+        # 3. Deep Interaction Stack
+        self.convs = ModuleList()
+        self.lns = ModuleList()
         
-        # 4. Global Attention Pooling
+        head_dim = hidden_channels // 4 # Using 4 heads
+        for _ in range(num_layers):
+            self.convs.append(
+                GATv2Conv(hidden_channels, head_dim, heads=4, concat=True, edge_dim=16)
+            )
+            self.lns.append(LayerNorm(hidden_channels))
+        
+        # 4. Global Attention Pooling (Readout)
         gate_nn = Sequential(
             Linear(hidden_channels, hidden_channels // 2),
             SiLU(),
             Linear(hidden_channels // 2, 1)
         )
-        self.global_pool = GlobalAttention(gate_nn)
+        self.global_pool = aggr.AttentionalAggregation(gate_nn)
         
-        # 5. Final Classifier (MLP) after pooling
-        # Concatenate attention, max, and mean pooling with global event attributes
-        self.classifier = Sequential(                                   # Sequential MLP, layer of linear transformations, activations
-            Linear(hidden_channels * 3 + global_dim, hidden_channels),  # input layer
-            SiLU(),
-            Dropout(0.3),  # Dropout for regularization
-            Linear(hidden_channels, hidden_channels // 2),              # hidden layer, 64 -> 32
+        # 5. Final Classifier (MLP)
+        self.classifier = Sequential(
+            Linear(hidden_channels * 3 + global_dim, hidden_channels),
             SiLU(),
             Dropout(0.3),
-            Linear(hidden_channels // 2, 1) # Logit output for Binary Cross Entropy (one number because it's binary classification), 32 -> 1
+            Linear(hidden_channels, hidden_channels // 2),
+            SiLU(),
+            Dropout(0.3),
+            Linear(hidden_channels // 2, 1)
         )
-        # mean pooling and max pooling since we do not care about the hits themselves, but about the overall event, 
-        # so we need to aggregate the hit information into a single vector representation for the whole graph (event).
-
-        # We use only one hidden layer in the classifier because the relations between the different nodes are already captured in the GNN layers (SAGEConv)
 
     def forward(self, data):
-        """
-        forward method defines how the input data flows through the model to produce the output.
-        data is a batch of graphs (events) where each graph has node features (x_cont and x_cat), edge_index (graph structure), batch (which graph each node belongs to), 
-        and global_attr (global event-level attributes).
-        """
-
         x_cont, x_cat, batch, global_attr = \
             data.x_cont, data.x_cat, data.batch, data.global_attr
         
-        # Project module embedding and concatenate with continuous features
+        # Initial projection
         emb = self.module_emb(x_cat)
-        x = torch.cat([x_cont, emb], dim=-1)
+        x_concat = torch.cat([x_cont, emb], dim=-1)
         
-        x = self.node_encoder(x) # initial encoding of node features, 24 -> 64
+        x = self.node_encoder(x_concat)
         
-        # Generate the physical k-NN graph dynamically on the fly
-        # Indices in x_cont: 0 -> x, 1 -> y, 2 -> z
-        # We use x, y, z because LLPs displaced tracks do not originate from the primary vertex,
-        # so eta/phi are not conserved along the track. x, y, z preserves Euclidean straight lines.
-        coords = x_cont[:, :3]
-        edge_index = knn_graph(coords, k=8, batch=batch, loop=False)
+        # --- METRIC LEARNING GRAPH CONSTRUCTION ---
+        latent_coords = self.metric_mlp(x_concat)
         
-        # Explicit Track Vectors: compute difference between connected hits
-        edge_attr = coords[edge_index[0]] - coords[edge_index[1]]
+        # Use a hybrid approach: Physical (normalized) + Latent space for graph construction.
+        # x_cont[:, :3] contains the normalized x, y, z coordinates (mean 0, std 1).
+        # This matches the scale of the latent embeddings, ensuring the graph is not biased by units (mm vs latent).
+        pos_normalized = x_cont[:, :3]
+        combined_coords = torch.cat([pos_normalized, latent_coords], dim=-1)
+        
+        # Build k-NN graph in the combined space (11D)
+        edge_index = knn_graph(combined_coords, k=self.k, batch=batch, loop=False)
+        
+        # 1. Physical edge attributes (geometry) - Using normalized coordinates for stability
+        coords_diff = x_cont[edge_index[0], :3] - x_cont[edge_index[1], :3]
+        dist = torch.norm(coords_diff, p=2, dim=-1, keepdim=True) + 1e-6
+        dir_norm = coords_diff / dist
+        
+        latent_diff = latent_coords[edge_index[0]] - latent_coords[edge_index[1]]
+        latent_dist = torch.norm(latent_diff, p=2, dim=-1, keepdim=True)
 
-        # Message Passing layers with residual connections (skip connections)
-        x_res = x 
-        x = self.ln1(self.conv1(x, edge_index, edge_attr=edge_attr))
-        x = F.silu(x + x_res)
-        
-        x_res = x
-        x = self.ln2(self.conv2(x, edge_index, edge_attr=edge_attr))
-        x = F.silu(x + x_res)
-        
-        x_res = x
-        x = self.ln3(self.conv3(x, edge_index, edge_attr=edge_attr))
-        x = F.silu(x + x_res)
+        edge_attr = torch.cat([
+            coords_diff, dir_norm, dist,
+            latent_diff, latent_dist
+        ], dim=-1)
 
-        # Global Pooling (Readout)
-        # Obtain a vector representation for each graph (event) in the batch
-        pool_att = self.global_pool(x, batch) # attention-weighted sum of nodes
-        pool_max = global_max_pool(x, batch) # max of node features for each graph, captures the most salient features across the graph
-        pool_mean = global_mean_pool(x, batch) # average of node features
+        # Deep Interaction Stack with Residual Connections
+        for i in range(self.num_layers):
+            x_res = x
+            x = self.convs[i](x, edge_index, edge_attr=edge_attr)
+            x = self.lns[i](x)
+            x = F.silu(x + x_res)
+
+        # Global Pooling
+        pool_att = self.global_pool(x, batch)
+        pool_max = global_max_pool(x, batch)
+        pool_mean = global_mean_pool(x, batch)
         
-        # Concatenate global context (e.g., nVtx, nClu, nTrk)
-        out = torch.cat([pool_att, pool_max, pool_mean, global_attr], dim=-1) # dim=-1 means concatenate along the last dimension
-        
-        return self.classifier(out) # classify given the aggregated graph representation, output is a logit for binary classification
+        # Classifier
+        out = torch.cat([pool_att, pool_max, pool_mean, global_attr], dim=-1)
+        return self.classifier(out)

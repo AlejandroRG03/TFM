@@ -5,17 +5,17 @@ from torchmetrics.classification import BinaryAccuracy, BinaryAUROC
 from codex_gnn_model import CODEXVetoGNN
 
 class CODEXLightning(pl.LightningModule):
-    def __init__(self, pos_weight_val, learning_rate=1e-3):
+    def __init__(self, pos_weight_val, learning_rate=1e-3, k=8):
         super().__init__()
         self.save_hyperparameters() # Automatically saves lr and pos_weight
         self.learning_rate = learning_rate
         
         # Instantiate the pure PyTorch model
-        self.model = CODEXVetoGNN()
+        self.model = CODEXVetoGNN(k=k)
         
         # Loss function with background/signal weights
-        pos_weight = torch.tensor([pos_weight_val])
-        self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+        self.register_buffer('pos_weight', torch.tensor([pos_weight_val]))
+        self.criterion = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight)
         
         # Official PyTorch metrics (GPU optimized)
         self.train_acc = BinaryAccuracy()
@@ -59,6 +59,21 @@ class CODEXLightning(pl.LightningModule):
         self.log('val_auc', self.val_auc, prog_bar=True, batch_size=batch.num_graphs, sync_dist=True)
 
     def configure_optimizers(self):
-        # Define the optimizer here
+        # Adam optimizer with the provided learning rate
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-        return optimizer
+        
+        # Scheduler to reduce LR when validation loss plateaus
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, 
+            mode='min', 
+            factor=0.5, 
+            patience=3
+        )
+        
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val_loss",
+            },
+        }

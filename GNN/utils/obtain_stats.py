@@ -15,7 +15,7 @@ import time
 # ==============================================================================
 # MAIN CONFIGURATION
 # ==============================================================================
-INPUT_FILE_NAME_BACKGROUND = "ntuple_background_38011800.root"
+INPUT_FILE_NAME_BACKGROUND = "ntuple_background_30011001.root"
 INPUT_FILE_NAME_SIGNAL = "ntuple_signal_40114060.root"
 OUTPUT_FILE = "stats/global_normalization_stats.json"
 
@@ -24,7 +24,8 @@ INPUT_FILE_PATH = "/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/"
 # Variables to extract from ROOT
 VAR_NAMES = [
     'eventNumber', 'x', 'y', 'z', 'n_pix', 'module', 
-    'nVtx_per_event', 'nClu_per_event', 'nTrk_per_event'
+    'nVtx_per_event', 'nClu_per_event', 'nTrk_per_event',
+    'beamspotX', 'beamspotY' # for centering the coordinates in the beamspot
 ]
 TREE_NAME = "VeloMultiTuple_73eaa531/Clusters"
 
@@ -47,6 +48,13 @@ def compute_fast_statistics():
     events = uproot.dask([FULL_PATH_SIGNAL, FULL_PATH_BACKGROUND], step_size=1_000_000)
     events = events[VAR_NAMES]
     
+    # Center x and y in the beamspot (assuming beamspotX and beamspotY are available in the data)
+    events['x'] = events['x'] - events['beamspotX']
+    events['y'] = events['y'] - events['beamspotY']
+
+    # Filtramos los hits (solo z >= -150) para que las estadísticas coincidan con los datos de entrenamiento
+    events = events[events.z >= -150]
+
     # --- 2. Lazy Feature Engineering ---
     r_T = np.sqrt(events.x**2 + events.y**2)
     phi = np.arctan2(events.y, events.x)
@@ -73,8 +81,10 @@ def compute_fast_statistics():
     events["eta"] = eta
     events["codex_angle"] = codex_angle 
 
+    events["module_side"] = events["module"] % 2
+
     # --- 3. Column Definitions ---
-    hit_cols = ['x', 'y', 'z', 'r_T', 'phi', 'eta', 'n_pix', 'codex_angle']
+    hit_cols = ['x', 'y', 'z', 'r_T', 'phi', 'eta', 'n_pix', 'codex_angle', 'module_side']
     event_cols = ['nVtx_per_event', 'nClu_per_event', 'nTrk_per_event']
     all_cols = hit_cols + event_cols
     

@@ -54,12 +54,32 @@ bkg_df = read_root(BKG_FILE, TREE_NAME, VAR_NAMES, nrows=10_000_000)
 sig_df = read_root(SIG_FILE, TREE_NAME, VAR_NAMES, nrows=10_000_000)
 print('Data loaded!')
 
+print(bkg_df['bxType'].value_counts())
+print(sig_df['bxType'].value_counts())
+
 # drop the rows with the last eventNumber since it is incomplete
 last_event_bkg = bkg_df['eventNumber'].iloc[-1]
 last_event_sig = sig_df['eventNumber'].iloc[-1]
 
 bkg_df = bkg_df[bkg_df['eventNumber'] != last_event_bkg]
 sig_df = sig_df[sig_df['eventNumber'] != last_event_sig]
+
+print(f"Initial average hits per event: {bkg_df.groupby('eventNumber').size().mean():.2f} (BKG), {sig_df.groupby('eventNumber').size().mean():.2f} (SIG)")
+
+# --- filter hits --- #
+
+# center in beamspot
+bkg_df['x'] = bkg_df['x'] - bkg_df['beamspotX']
+bkg_df['y'] = bkg_df['y'] - bkg_df['beamspotY']
+sig_df['x'] = sig_df['x'] - sig_df['beamspotX']
+sig_df['y'] = sig_df['y'] - sig_df['beamspotY']
+
+# keep only hits that potentially contain physical info
+bkg_df = bkg_df[(bkg_df['z'] >= -150) & (bkg_df['x'] >= 0)]
+sig_df = sig_df[(sig_df['z'] >= -150) & (sig_df['x'] >= 0)]
+
+print(f"Average hits per event after filtering: {bkg_df.groupby('eventNumber').size().mean():.2f} (BKG), {sig_df.groupby('eventNumber').size().mean():.2f} (SIG)")
+
 
 # --- feature engineering ---
 
@@ -75,7 +95,7 @@ sig_df['codex_angle'] = compute_angles(CODEX_AXIS, sig_df)
 bkg_df['in_codex'] = (bkg_df['eta'] >= eta_min) & (bkg_df['eta'] <= eta_max) & (bkg_df['phi'] >= phi_min) & (bkg_df['phi'] <= phi_max)
 sig_df['in_codex'] = (sig_df['eta'] >= eta_min) & (sig_df['eta'] <= eta_max) & (sig_df['phi'] >= phi_min) & (sig_df['phi'] <= phi_max)
 
-# global event variables
+
 
 def aligned_hits_per_event(df_group, eta_width, phi_width):
     """
@@ -224,7 +244,7 @@ plot_1d_comparison(bkg_event_df['hits_in_codex'], sig_event_df['hits_in_codex'],
 # multiplicity per event
 plot_1d_comparison(bkg_event_df['total_hits'], sig_event_df['total_hits'], 
                    'Total VELO Hits per Event', 'Hits', 'total_hits_per_event.png',
-                   density=True, is_discrete=False, window=(0, 5000)) # Ajusta la ventana
+                   density=True, is_discrete=False, window=(0, 5000), logy=True) # Ajusta la ventana
 # fraction of hits in codex per event
 plot_1d_comparison(bkg_event_df['fraction_hits_in_codex'].dropna(), sig_event_df['fraction_hits_in_codex'].dropna(), 
                    'Fraction of Hits in Codex', 'Fraction', 'fraction_in_codex.png',
@@ -275,3 +295,11 @@ plot_1d_comparison(bkg_event_df[mask_bkg]['aligned_hits_codex'], sig_event_df[ma
 plot_1d_comparison(bkg_event_df[mask_bkg]['aligned_hits_fraction_codex'], sig_event_df[mask_sig]['aligned_hits_fraction_codex'], 
                    'Fraction of Aligned Hits in Codex per Event', 'Aligned Hits Fraction', 'aligned_hits_fraction_codex.png',
                    density=True, bins=20, window=(0, 1), logy=True) # of hits in codex, how many are aligned?
+
+
+plot_1d_comparison(bkg_df['beamspotX'], sig_df['beamspotX'],
+                   'Beamspot X', 'X (mm)', 'beamspotX.png',
+                   density=True, bins=50, window=(bkg_df['beamspotX'].min(), bkg_df['beamspotX'].max()))
+plot_1d_comparison(bkg_df['beamspotY'], sig_df['beamspotY'],
+                   'Beamspot Y', 'Y (mm)', 'beamspotY.png',
+                   density=True, bins=50, window=(bkg_df['beamspotY'].min(), bkg_df['beamspotY'].max()))
