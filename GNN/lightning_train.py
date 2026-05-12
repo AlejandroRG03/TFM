@@ -31,17 +31,16 @@ BACKGROUND_DEC_IDS = ["30011001" if BKG_TYPE == "MUON" else "38000800"]
 
 OUTPUT_NAME   = f"{BKG_TYPE}_CODEX_GNN"
 
-BATCH_SIZE    = 128  # Adjusted for V2 model complexity
+BATCH_SIZE    = 64   # Fits ~7GB of 24GB VRAM with bf16 — much better GPU utilization
 EPOCHS        = 100
-LEARNING_RATE = 5e-4
-K_NEIGHBOURS  = 8
+LEARNING_RATE = 7e-4  # Slightly higher: linear scaling with larger batch (64 vs 32)
 
 # LIMIT CHUNKS FOR QUICK TESTS
-MAX_CHUNKS    = 10  # Set to None to train with all data
+MAX_CHUNKS    = 30   # Set to None to train with all data
 TRAIN_SPLIT   = 0.8
-PATIENCE      = 5
-NUM_WORKERS   = 8
-USE_MULTI_GPU = True # Set to True to use all available GPUs with DDP
+PATIENCE      = 10   # More data = slower convergence per epoch, need more patience
+NUM_WORKERS   = 2    # More workers can cause more memory issues
+USE_MULTI_GPU = False # Single GPU is better: avoids DDP deadlocks + larger batch fills GPU
 
 # ==============================================================================
 # HELPER FUNCTIONS
@@ -72,6 +71,9 @@ class ChunkIterableDataset(IterableDataset):
     """
     An IterableDataset that loads PyTorch Geometric data chunks on the fly.
     This prevents RAM exhaustion when dealing with large amounts of graphs.
+    
+    If the loaded Data objects lack an edge_index (old preprocessing format),
+    the module-aware graph is built on-the-fly as a fallback.
     """
     def __init__(self, file_pairs: List[Tuple[str, str]], is_train: bool = True, train_split: float = 0.8, seed: int = 42):
         self.file_pairs = file_pairs
@@ -81,6 +83,7 @@ class ChunkIterableDataset(IterableDataset):
 
     def __iter__(self):
         import torch.distributed as dist
+        from utils.build_graph import build_velo_graph, compute_edge_attr
         
         # 1. Distribute files among GPUs (DDP) if multiple GPUs are used
         if dist.is_available() and dist.is_initialized():
@@ -121,6 +124,18 @@ class ChunkIterableDataset(IterableDataset):
             # Yield graphs one by one
             for data in combined_data:
                 data.num_nodes = data.x_cont.size(0)
+                
+                # Build graph from scratch only for truly old data (no edge_index)
+                if not hasattr(data, 'edge_index') or data.edge_index is None:
+                    data.edge_index = build_velo_graph(data.pos, data.x_cat)
+                
+                # Ensure edge_index is int64 (may be stored as int32 to save disk)
+                data.edge_index = data.edge_index.to(torch.long)
+                
+                # Always compute edge_attr on-the-fly (<1ms, pure arithmetic)
+                # This avoids storing it on disk (~5GB per chunk → 0)
+                data.edge_attr = compute_edge_attr(data.pos, data.x_cont, data.edge_index)
+                
                 yield data
 
     def split_chunk_data(self, data_list: list) -> list:
@@ -167,7 +182,7 @@ def train():
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, persistent_workers=True)
 
     pos_weight_val = float(len(bkg_files)) / max(1, len(sig_files))
-    model = CODEXLightning(pos_weight_val=pos_weight_val, learning_rate=LEARNING_RATE, k=K_NEIGHBOURS)
+    model = CODEXLightning(pos_weight_val=pos_weight_val, learning_rate=LEARNING_RATE)
     
     # 4.5 Apply torch.compile for massive kernel fusion speedup (PyTorch 2.0+)
     # if hasattr(torch, "compile"):
@@ -208,7 +223,8 @@ def train():
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=devices_config,
         strategy=strategy_config,
-        precision="16-mixed",  # Highly optimized training
+        precision="bf16-mixed",  # BF16: same range as fp32, no overflow risk
+        gradient_clip_val=1.0,   # Prevent gradient explosions
         callbacks=[early_stop_callback, checkpoint_callback, lr_monitor]
     )
 

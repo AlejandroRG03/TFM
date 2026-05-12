@@ -5,13 +5,13 @@ from torchmetrics.classification import BinaryAccuracy, BinaryAUROC
 from codex_gnn_model import CODEXVetoGNN
 
 class CODEXLightning(pl.LightningModule):
-    def __init__(self, pos_weight_val, learning_rate=1e-3, k=8):
+    def __init__(self, pos_weight_val, learning_rate=1e-3):
         super().__init__()
         self.save_hyperparameters() # Automatically saves lr and pos_weight
         self.learning_rate = learning_rate
         
-        # Instantiate the pure PyTorch model
-        self.model = CODEXVetoGNN(k=k)
+        # Instantiate the pure PyTorch model (static graph — no k parameter needed)
+        self.model = CODEXVetoGNN()
         
         # Loss function with background/signal weights
         self.register_buffer('pos_weight', torch.tensor([pos_weight_val]))
