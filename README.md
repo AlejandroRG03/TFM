@@ -29,4 +29,4 @@ The main implementation is located in the `/GNN` directory and utilizes PyTorch 
 3. **Node Network (Object Model):** Updates the latent state of each hit based on aggregated messages received from its neighbors.
 4. **Global Pooling:** Aggregation of node and edge information from the entire graph to produce a binary classification score (Signal vs. Background).
 
-*Notice that this implementation is currently in devlopemente and is subject to changes*
+*Notice that this implementation is currently in development and is subject to changes*
