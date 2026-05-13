@@ -1,1 +1,32 @@
-Active Veto System for CODEX-b via Graph Neural Networks and LHCb VELO DataThis repository hosts the development and implementation of an Active Veto system based on Graph Neural Networks (GNNs). The project is designed for the CODEX-beta demonstrator and the future CODEX-b experiment, both located in the LHCb cavern. The system's primary goal is to provide real-time discrimination of Standard Model (SM) background particles pointing toward the detector volume, ensuring a background-free environment for Long-Lived Particle (LLP) searches.Physics MotivationCODEX-b is dedicated to searching for Beyond the Standard Model (BSM) signatures, specifically displaced decays of LLPs. To achieve the required sensitivity, it is imperative to identify and reject background flux (primarily $\mu^\pm$ and $K_L^0$) before they enter the decay volume. By processing raw hits from the LHCb Vertex Locator (VELO), the GNN reconstructs trajectory patterns to identify events containing particles within the CODEX-b geometric acceptance.Dataset and Feature EngineeringThe classifier is trained on simulated VELO hits from both signal (LLP) and background ($K_L^0$, muons) events. Each hit is characterized by 21 input features:Spatial Coordinates: x, y, z (Cartesian coordinates in the LHCb global frame).Detector Geometry: module, chip, sensor, row, col.Cluster Properties: n_pix (number of pixels, highly correlated with the particle's angle of incidence).Event Multiplicity: nTrk_per_event, nVtx_per_event, nClu_per_event.Temporal Metadata: bxType, bxId, gpsTime.Simulation Identifiers: eventNumber, runNumber, triggerType, eventType, beamspotX, beamspotY.Graph Neural Network ArchitectureThe model is implemented using PyTorch Geometric (PyG) and follows an Interaction Network (IN) paradigm, which is well-suited for the irregular, sparse nature of detector data.This construction can be found in /GNN but notice that is preliminary.
+# Active Veto for CODEX-b via GNNs and LHCb VELO Hits
+
+This repository contains the development of an Active Veto system based on Graph Neural Networks (GNN) for the CODEX-beta and CODEX-b experiments located in the LHCb cavern (IP8). The primary objective is to discriminate in real-time whether an event contains Standard Model particles (background) pointing toward the detector acceptance, allowing for their rejection and ensuring a "zero-background" environment for Long-Lived Particle (LLP) searches.
+
+## Project Motivation
+
+CODEX-b searches for Beyond the Standard Model (BSM) signatures manifesting as displaced decays. To maximize sensitivity, it is crucial to identify background particles (such as muons and $K_L^0$) before they reach the detector volume. By utilizing the raw "hits" from the Vertex Locator (VELO) subdetector, we can reconstruct trajectory patterns and veto background events with high efficiency.
+
+## Dataset and Features
+
+The data consists of simulated VELO hits for both signal and background events. Each hit includes the following variables (features):
+
+* **Temporal:** `bxType`, `bxId`, `gpsTime`.
+* **Identifiers:** `eventNumber`, `runNumber`, `triggerType`, `eventType`.
+* **Global Geometry:** `beamspotX`, `beamspotY`.
+* **Multiplicity:** `nTrk_per_event`, `nVtx_per_event`, `nClu_per_event`.
+* **Hardware Information:** `module`, `chip`, `sensor`, `row`, `col`.
+* **Cluster Properties:** `n_pix` (correlated with the angle of incidence).
+* **Spatial Coordinates (3D):** `x`, `y`, `z` (Cartesian coordinates in the LHCb reference frame).
+
+## Classifier Architecture (GNN)
+
+The main implementation is located in the `/GNN` directory and utilizes PyTorch Geometric (PyG). The model is based on an Interaction Network (IN) designed to exploit the detector topology and hit correlations.
+
+### GNN Components:
+
+1. **Graph Construction:** Hits are transformed into nodes. Edges are created based on geometric constraints, such as proximity between VELO planes and alignment with the CODEX-b axis.
+2. **Edge Network (Relational Model):** An MLP that predicts the importance of connections (edges) between hits, effectively performing edge classification or weighting.
+3. **Node Network (Object Model):** Updates the latent state of each hit based on aggregated messages received from its neighbors.
+4. **Global Pooling:** Aggregation of node and edge information from the entire graph to produce a binary classification score (Signal vs. Background).
+
+*Notice that this implementation is currently in devlopemente and is subject to changes*
