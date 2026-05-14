@@ -8,6 +8,9 @@ import warnings
 from typing import List, Tuple, Optional
 
 import torch
+import torch._dynamo
+torch._dynamo.config.capture_scalar_outputs = True
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 # Optimizations and warning suppressions
 torch.set_float32_matmul_precision('medium')
@@ -18,6 +21,7 @@ from torch.utils.data import IterableDataset, get_worker_info
 from torch_geometric.loader import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.loggers import WandbLogger
 from lightning_model import CODEXLightning
 
 # ==============================================================================
@@ -31,15 +35,15 @@ BACKGROUND_DEC_IDS = ["30011001" if BKG_TYPE == "MUON" else "38000800"]
 
 OUTPUT_NAME   = f"{BKG_TYPE}_CODEX_GNN"
 
-BATCH_SIZE    = 64   # Fits ~7GB of 24GB VRAM with bf16 — much better GPU utilization
+BATCH_SIZE    = 128  # Balanced: fast but safe for A30 (24GB VRAM) with V4 architecture
 EPOCHS        = 100
-LEARNING_RATE = 7e-4  # Slightly higher: linear scaling with larger batch (64 vs 32)
+LEARNING_RATE = 4e-4  
 
 # LIMIT CHUNKS FOR QUICK TESTS
-MAX_CHUNKS    = 30   # Set to None to train with all data
+MAX_CHUNKS    = 50 # Training with full dataset for maximum AUC
 TRAIN_SPLIT   = 0.8
-PATIENCE      = 10   # More data = slower convergence per epoch, need more patience
-NUM_WORKERS   = 2    # More workers can cause more memory issues
+PATIENCE      = 10   
+NUM_WORKERS   = 12   # Turbo mode: utilize 12 of 32 CPU cores for data prep
 USE_MULTI_GPU = False # Single GPU is better: avoids DDP deadlocks + larger batch fills GPU
 
 # ==============================================================================
@@ -178,16 +182,16 @@ def train():
     train_dataset = ChunkIterableDataset(paired_files, is_train=True, train_split=TRAIN_SPLIT)
     val_dataset = ChunkIterableDataset(paired_files, is_train=False, train_split=TRAIN_SPLIT)
 
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, persistent_workers=True)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, persistent_workers=True)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, persistent_workers=True, pin_memory=True, prefetch_factor=4)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, persistent_workers=True, pin_memory=True, prefetch_factor=4)
 
     pos_weight_val = float(len(bkg_files)) / max(1, len(sig_files))
     model = CODEXLightning(pos_weight_val=pos_weight_val, learning_rate=LEARNING_RATE)
     
-    # 4.5 Apply torch.compile for massive kernel fusion speedup (PyTorch 2.0+)
-    # if hasattr(torch, "compile"):
-    #     print("--> Enabling torch.compile()...")
-    #     model = torch.compile(model)
+    # 4.5 Apply torch.compile on the underlying GNN (not the Lightning wrapper)
+    if hasattr(torch, "compile"):
+        print("--> Enabling torch.compile() on CODEXVetoGNN...")
+        model.model = torch.compile(model.model, dynamic=True)
 
     # 5. Set up Callbacks
     early_stop_callback = EarlyStopping(
@@ -208,6 +212,13 @@ def train():
     )
 
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
+    
+    # 5.5 Initialize Weights & Biases Logger
+    wandb_logger = WandbLogger(
+        project="CODEX-GNN",
+        name=OUTPUT_NAME,
+        log_model="all"
+    )
 
 
     # 6. Initialize PyTorch Lightning Trainer
@@ -225,7 +236,8 @@ def train():
         strategy=strategy_config,
         precision="bf16-mixed",  # BF16: same range as fp32, no overflow risk
         gradient_clip_val=1.0,   # Prevent gradient explosions
-        callbacks=[early_stop_callback, checkpoint_callback, lr_monitor]
+        callbacks=[early_stop_callback, checkpoint_callback, lr_monitor],
+        logger=wandb_logger      # Enabled wandb tracking
     )
 
     # 7. Train

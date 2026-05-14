@@ -91,8 +91,8 @@ class CODEXVetoGNN(nn.Module):
         edge_hidden:     Width of the edge MLP bottleneck (default 96).
     """
     def __init__(self, n_cont_features=9, n_modules=52, embedding_dim=16,
-                 hidden_channels=128, edge_dim=10, global_dim=3, num_layers=5,
-                 edge_hidden=96):
+                 hidden_channels=96, edge_dim=10, global_dim=3, num_layers=4,
+                 edge_hidden=64):
         super().__init__()
         self.num_layers = num_layers
 
@@ -135,15 +135,17 @@ class CODEXVetoGNN(nn.Module):
         self.global_pool = aggr.AttentionalAggregation(gate_nn)
 
         # 5. Final Classifier (MLP)
-        pool_dim = hidden_channels * 3 + global_dim  # att + max + mean + global
+        # Jumping Knowledge: we concatenate pooled features from ALL layers
+        # (pool_att + pool_max + pool_mean) * num_layers + global_attr
+        pool_dim = (hidden_channels * 3) * num_layers + global_dim
         self.classifier = Sequential(
-            Linear(pool_dim, hidden_channels),
+            Linear(pool_dim, hidden_channels * 2),
             SiLU(),
             Dropout(0.3),
-            Linear(hidden_channels, hidden_channels // 2),
+            Linear(hidden_channels * 2, hidden_channels),
             SiLU(),
             Dropout(0.3),
-            Linear(hidden_channels // 2, 1)
+            Linear(hidden_channels, 1)
         )
 
     def forward(self, data):
@@ -162,14 +164,20 @@ class CODEXVetoGNN(nn.Module):
         edge_attr_enc = self.edge_encoder(edge_attr)
 
         # ── Deep Interaction Stack ────────────────────────────────────
+        layer_outputs = []
         for layer in self.layers:
             x = layer(x, edge_index, edge_attr_enc)
+            layer_outputs.append(x)
 
-        # ── Global Pooling ────────────────────────────────────────────
-        pool_att  = self.global_pool(x, batch)
-        pool_max  = global_max_pool(x, batch)
-        pool_mean = global_mean_pool(x, batch)
-
-        # ── Classifier ────────────────────────────────────────────────
-        out = torch.cat([pool_att, pool_max, pool_mean, global_attr], dim=-1)
+        # ── Global Pooling (Jumping Knowledge) ────────────────────────
+        # We aggregate information from every depth level to capture 
+        # both local track fragments and global event shape.
+        pooled_features = []
+        for x_layer in layer_outputs:
+            pooled_features.append(self.global_pool(x_layer, batch))
+            pooled_features.append(global_max_pool(x_layer, batch))
+            pooled_features.append(global_mean_pool(x_layer, batch))
+        
+        # Combine all levels + global attributes (nVtx, nClu, etc.)
+        out = torch.cat(pooled_features + [global_attr], dim=-1)
         return self.classifier(out)
