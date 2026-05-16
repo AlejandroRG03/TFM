@@ -1,0 +1,1495 @@
+2026-05-15 00:04:51,947 INFO    MainThread:935242 [wandb_setup.py:_flush():81] Current SDK version is 0.26.1
+2026-05-15 00:04:51,947 INFO    MainThread:935242 [wandb_setup.py:_flush():81] Configure stats pid to 935242
+2026-05-15 00:04:51,947 INFO    MainThread:935242 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2026-05-15 00:04:51,947 INFO    MainThread:935242 [wandb_init.py:setup_run_log_directory():723] Logging user logs to wandb/run-20260515_000451-0otmmjst/logs/debug.log
+2026-05-15 00:04:51,948 INFO    MainThread:935242 [wandb_init.py:setup_run_log_directory():724] Logging internal logs to wandb/run-20260515_000451-0otmmjst/logs/debug-internal.log
+2026-05-15 00:04:51,948 INFO    MainThread:935242 [wandb_init.py:init():850] calling init triggers
+2026-05-15 00:04:51,948 INFO    MainThread:935242 [wandb_init.py:init():855] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2026-05-15 00:04:51,948 INFO    MainThread:935242 [wandb_init.py:init():898] starting backend
+2026-05-15 00:04:53,122 INFO    MainThread:935242 [wandb_init.py:init():913] sending inform_init request
+2026-05-15 00:04:53,481 INFO    MainThread:935242 [wandb_init.py:init():918] backend started and connected
+2026-05-15 00:04:53,485 INFO    MainThread:935242 [wandb_init.py:init():988] updated telemetry
+2026-05-15 00:04:53,509 INFO    MainThread:935242 [wandb_init.py:init():1011] communicating run to backend with 90.0 second timeout
+2026-05-15 00:04:54,095 INFO    MainThread:935242 [wandb_init.py:init():1056] starting run threads in backend
+2026-05-15 00:04:54,633 INFO    MainThread:935242 [wandb_run.py:_console_start():2554] atexit reg
+2026-05-15 00:04:54,633 INFO    MainThread:935242 [wandb_run.py:_redirect():2403] redirect: wrap_raw
+2026-05-15 00:04:54,633 INFO    MainThread:935242 [wandb_run.py:_redirect():2472] Wrapping output streams.
+2026-05-15 00:04:54,633 INFO    MainThread:935242 [wandb_run.py:_redirect():2495] Redirects installed.
+2026-05-15 00:04:54,648 INFO    MainThread:935242 [wandb_init.py:init():1094] run started, returning control to user process
+2026-05-15 00:04:54,899 INFO    MainThread:935242 [wandb_run.py:_config_callback():1415] config_cb None None {'pos_weight_val': 1.926696877922772, 'learning_rate': 0.0005, 'model_kwargs': {'n_cont_features': 11, 'hidden_channels': 128, 'num_layers': 5, 'edge_hidden': 96, 'embedding_dim': 24}}
+2026-05-15 10:01:36,191 INFO    wandb-AsyncioManager-main:935242 [service_client.py:_forward_responses():134] Reached EOF.
+2026-05-15 10:01:36,192 INFO    wandb-AsyncioManager-main:935242 [mailbox.py:close():155] Closing mailbox, abandoning 1 handles.
+2026-05-15 10:01:36,745 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,770 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,771 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,771 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,772 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,774 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,774 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,775 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,775 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,776 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,776 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,776 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,782 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,782 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,782 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,783 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,783 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,783 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,783 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,784 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,784 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,784 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,784 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,785 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,785 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,785 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,785 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,786 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,786 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,786 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,786 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,787 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,787 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,787 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,787 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,787 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,788 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,788 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,788 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,788 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,789 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,789 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,789 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,789 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,790 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,790 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,790 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,790 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,790 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,791 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,791 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,791 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,791 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,792 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,792 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,792 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,792 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,792 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,793 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,793 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,793 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,793 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,794 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,794 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,794 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,794 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,795 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,795 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,795 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,795 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,795 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,796 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,796 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,796 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,796 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,797 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,797 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,797 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,797 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,861 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,863 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,866 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,868 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,869 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,870 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,871 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-05-15 10:01:36,872 ERROR   wandb-AsyncioManager-main:935242 [asyncio_manager.py:fn_wrap_exceptions():184] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 182, in fn_wrap_exceptions
+    await fn()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 45, in publish
+    await self._send_server_request(request)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 78, in _send_server_request
+    raise self._broken_exc.with_traceback(self._broken_tb)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 87, in _send_server_request
+    await self._drain_writer()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 96, in _drain_writer
+    await self._writer.drain()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3841/stable/linux-64/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost

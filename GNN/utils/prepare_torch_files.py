@@ -4,43 +4,39 @@ import time
 import json
 import torch
 import traceback
+import tempfile
 import numpy as np
 import pandas as pd
 import uproot
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from multiprocessing import Process, get_context
 from torch_geometric.data import Data
 from build_graph import build_velo_graph, compute_edge_attr
 
-# Adjust the path to where you have modules/functions.py
 sys.path.append("/home3/alejandro.rodriguez/python_modules")
 from functions import *
 
-# ==============================================================================
-# GLOBAL CONFIGURATION
-# ==============================================================================
 INPUT_FILE_PATH = "/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/"
 OUTPUT_DIR      = "/lustre/LHCb/alejandro.rodriguez/torch_data"
 TREE_NAME       = "VeloMultiTuple_73eaa531/Clusters"
-STATS_FILE      = "stats/global_normalization_stats.json"
+STATS_FILE      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stats/global_normalization_stats.json")
 
 VAR_NAMES = [
-    'eventNumber', 'x', 'y', 'z', 'n_pix', 'module', 
+    'eventNumber', 'x', 'y', 'z', 'n_pix', 'module',
     'nVtx_per_event', 'nClu_per_event', 'nTrk_per_event',
     'beamspotX', 'beamspotY'
 ]
 
 CONT_COLS    = ['x', 'y', 'z', 'r_T', 'phi', 'eta', 'n_pix', 'codex_angle', 'module_side']
+NEW_FEATS    = ['module_occupancy_norm']
 GLOBAL_COLS  = ['nVtx_per_event', 'nClu_per_event', 'nTrk_per_event']
 
-# ==============================================================================
-# LOAD STATISTICS GLOBALLY
-# ==============================================================================
 try:
     with open(STATS_FILE, 'r') as f:
         global_stats = json.load(f)
     print(f"Loaded global statistics from {STATS_FILE}")
-    
+
     MEANS_CONT = np.array([global_stats[c]['mean'] for c in CONT_COLS],   dtype=np.float32)
     STDS_CONT  = np.array([global_stats[c]['std']  for c in CONT_COLS],   dtype=np.float32) + 1e-8
     MEANS_GLOB = np.array([global_stats[c]['mean'] for c in GLOBAL_COLS], dtype=np.float32)
@@ -50,74 +46,89 @@ except Exception as e:
     sys.exit(1)
 
 # ==============================================================================
-# HELPER FUNCTIONS
+# WORKER INIT — runs once per subprocess
+# ==============================================================================
+
+def _worker_init():
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
+
+
+# ==============================================================================
+# EVENT PROCESSING (returns filename, not Data, to avoid tensor sharing issues)
 # ==============================================================================
 
 def process_event(args):
-    """Converts a single event DataFrame into a PyTorch Geometric Data object
-    with a pre-built static graph. Edge attributes are NOT stored — they are
-    recomputed on-the-fly during training to keep file sizes small (~10× reduction)."""
+    """
+    Build a single graph from an event DataFrame.
+
+    Returns (event_id, tmp_path_or_None) where tmp_path is the path to
+    a saved .pt file on /tmp containing the Data object, or None on failure.
+    """
     event_id, df_event, is_signal = args
 
     try:
-        # Skip events with too few hits (can't build meaningful graph)
         if len(df_event) < 3:
-            return None
+            return (event_id, None)
 
-        # Continuous features (normalized)
-        x_cont = torch.tensor(df_event[CONT_COLS].values, dtype=torch.float)
-        # Categorical features (module IDs)
+        feat_cols = CONT_COLS + NEW_FEATS
+        x_cont = torch.tensor(df_event[feat_cols].values, dtype=torch.float)
         x_cat = torch.tensor(df_event['module'].values, dtype=torch.long)
-        # Global event-level attributes
         global_attr = torch.tensor(df_event[GLOBAL_COLS].iloc[0].values, dtype=torch.float).unsqueeze(0)
-        # Physical coordinates (not normalized, in mm) — needed for edge_attr computation
         pos = torch.tensor(df_event[['x_raw', 'y_raw', 'z_raw']].values, dtype=torch.float)
-        # Label
         y = torch.tensor([is_signal], dtype=torch.float)
 
-        # ── STATIC GRAPH CONSTRUCTION ──────────────────────────────────────
-        # Build module-aware graph on CPU (done once, never recomputed)
         edge_index = build_velo_graph(
             pos, x_cat,
-            intra_radius=5.0,   # mm — sensor cluster spread
-            inter_k=3,           # neighbours toward adjacent modules
-            skip_k=1,            # neighbours toward M±2 (high-pT)
-            max_inter_dist=15.0  # mm — conservative cut
+            intra_radius=5.0, inter_k=3, skip_k=1, max_inter_dist=15.0
         )
 
-        # Skip events that produce no edges (isolated hits)
         if edge_index.shape[1] == 0:
-            return None
+            return (event_id, None)
 
-        # NOTE: edge_attr is NOT stored — it is recomputed in the DataLoader
-        # from pos + x_cont. This reduces file size from ~7GB to ~600MB per chunk.
+        # NEW: Compute edge attributes during preparation
+        edge_attr = compute_edge_attr(pos, x_cont, edge_index)
 
-        return Data(
-            x_cont=x_cont,
-            x_cat=x_cat,
-            pos=pos,
-            edge_index=edge_index.to(torch.int32),  # int32 saves 50% vs int64
-            y=y,
-            global_attr=global_attr,
+        degree = torch.bincount(edge_index[0], minlength=len(df_event)).float()
+        max_deg = degree.max()
+        if max_deg > 0:
+            degree = degree / max_deg
+        x_cont = torch.cat([x_cont, degree.unsqueeze(-1)], dim=-1)
+
+        data = Data(
+            x_cont=x_cont, x_cat=x_cat, pos=pos,
+            edge_index=edge_index.to(torch.int32),
+            edge_attr=edge_attr,
+            y=y, global_attr=global_attr,
             event_id=torch.tensor([event_id], dtype=torch.long),
             num_nodes=x_cont.shape[0]
         )
+
+
+        # Write to /tmp and return path instead of the Data object itself.
+        # This avoids PyTorch's multiprocessing tensor-sharing sockets,
+        # which fail on some cluster configurations (LbEnv/CVMFS).
+        tmp_path = os.path.join(tempfile.gettempdir(),
+                                f"_gnn_{os.getpid()}_{event_id}.pt")
+        tmp_path_tmp = tmp_path + ".tmp"
+        torch.save(data, tmp_path_tmp)
+        os.rename(tmp_path_tmp, tmp_path)
+        return (event_id, tmp_path)
+
     except Exception as e:
         print(f"  [WARN] Event {event_id} failed: {e}", flush=True)
-        return None
+        return (event_id, None)
 
-def run_preparation(label, n_workers=24, test_mode=False):
-    """Runs the full preparation pipeline for a specific label."""
-    
-    # 1. Label-specific configuration
+
+def run_preparation(label, n_workers=24, test_mode=False, force=False):
     is_signal = 1 if label == "SIGNAL" else 0
     dec_id = "40114060" if label == "SIGNAL" else "30011001" if label == "MUON" else "38000800"
     input_file_name = f"ntuple_{'signal' if is_signal else 'background'}_{dec_id}.root"
     full_path = f"{INPUT_FILE_PATH}{input_file_name}:{TREE_NAME}"
-    
+
     specific_output_dir = os.path.join(OUTPUT_DIR, 'signal' if is_signal else 'background', dec_id)
-    
-    # Check for existing files and resume from where we left off
+    os.makedirs(specific_output_dir, exist_ok=True)
+
     existing_chunks = set()
     if os.path.exists(specific_output_dir):
         for f in os.listdir(specific_output_dir):
@@ -127,33 +138,45 @@ def run_preparation(label, n_workers=24, test_mode=False):
                     existing_chunks.add(idx)
                 except ValueError:
                     pass
-        if existing_chunks:
-            print(f"[{label}] Found {len(existing_chunks)} existing chunks, will RESUME (skip existing)")
-    
-    os.makedirs(specific_output_dir, exist_ok=True)
-    
+
+    if force and existing_chunks:
+        print(f"[{label}] --force set, removing {len(existing_chunks)} existing chunks...")
+        for f in os.listdir(specific_output_dir):
+            if f.startswith("graphs_") and f.endswith(".pt"):
+                os.remove(os.path.join(specific_output_dir, f))
+        existing_chunks.clear()
+        print(f"[{label}] All chunks deleted, starting fresh.")
+
+    if existing_chunks:
+        print(f"[{label}] Found {len(existing_chunks)} existing chunks, will RESUME (skip existing)")
+
     print(f"\n[{label}] Starting processing: {full_path}")
     print(f"[{label}] Output: {specific_output_dir}")
-    
+
     chunk_counter = 0
     total_events = 0
     total_skipped = 0
     leftover_df = pd.DataFrame()
 
-    # 2. Iterate in chunks
+    # ── Persistent process pool (reused across all chunks in this label) ──
+    # Explicit fork context avoids PyTorch tensor-sharing socket errors.
+    fork_ctx = get_context('fork')
+    pool = ProcessPoolExecutor(
+        max_workers=n_workers, mp_context=fork_ctx,
+        initializer=_worker_init,
+    )
+
     try:
         for chunk in uproot.iterate(full_path, VAR_NAMES, step_size="100 MB", library="pd"):
             t0 = time.time()
-            
-            # Center in beamspot
+
             chunk['y'] = chunk['y'] - chunk['beamspotY']
             chunk['x'] = chunk['x'] - chunk['beamspotX']
-            # Physical cuts: Only remove hits very far behind the collision
             chunk = chunk[chunk['z'] >= -150]
 
             if not leftover_df.empty:
                 chunk = pd.concat([leftover_df, chunk], ignore_index=True)
-            if chunk.empty: 
+            if chunk.empty:
                 chunk_counter += 1
                 continue
 
@@ -166,7 +189,6 @@ def run_preparation(label, n_workers=24, test_mode=False):
                 chunk_counter += 1
                 continue
 
-            # --- SKIP if chunk already exists (resume mode) ---
             if chunk_counter in existing_chunks:
                 n_events_skip = df_to_process.groupby("eventNumber").ngroups
                 total_events += n_events_skip
@@ -176,43 +198,49 @@ def run_preparation(label, n_workers=24, test_mode=False):
                 chunk_counter += 1
                 continue
 
-            # --- 1. FEATURE ENGINEERING ---
+            # --- FEATURE ENGINEERING ---
             df_to_process['r_T'], df_to_process['eta'], df_to_process['phi'] = collider_system(df_to_process)
             df_to_process['codex_angle'] = compute_codex_angles(df_to_process)
             df_to_process['module_side'] = df_to_process['module'] % 2
-
-            # No aggressive codex_angle cuts here to prevent breaking track topologies.
-
-            # Keep raw coordinates
+            df_to_process['module_occupancy_norm'] = (
+                df_to_process.groupby(['eventNumber', 'module'])['module'].transform('count')
+                / df_to_process.groupby('eventNumber')['eventNumber'].transform('count')
+            )
             df_to_process['x_raw'], df_to_process['y_raw'], df_to_process['z_raw'] = df_to_process['x'], df_to_process['y'], df_to_process['z']
 
-            # --- 2. NORMALIZATION ---
+            # --- NORMALISATION ---
             df_to_process[CONT_COLS] = (df_to_process[CONT_COLS].values - MEANS_CONT) / STDS_CONT
             df_to_process[GLOBAL_COLS] = (df_to_process[GLOBAL_COLS].values - MEANS_GLOB) / STDS_GLOB
 
-            # --- 3. GRAPH GENERATION (sequential — avoids GIL/memory issues) ---
-            events = [(eid, df, is_signal) for eid, df in df_to_process.groupby("eventNumber")]
-            
+            # --- PARALLEL GRAPH GENERATION ---
+            events_list = [(eid, df, is_signal) for eid, df in df_to_process.groupby("eventNumber")]
             chunk_data_list = []
             n_failed = 0
-            for ev_args in events:
-                result = process_event(ev_args)
-                if result is not None:
-                    chunk_data_list.append(result)
-                else:
-                    n_failed += 1
-            
+
+            if len(events_list) > 0:
+                futures = {pool.submit(process_event, args): args[0] for args in events_list}
+                for future in as_completed(futures):
+                    event_id, tmp_path = future.result()
+                    if tmp_path is not None:
+                        data = torch.load(tmp_path, weights_only=False, map_location='cpu')
+                        os.remove(tmp_path)
+                        chunk_data_list.append(data)
+                    else:
+                        n_failed += 1
+
             total_events += len(chunk_data_list)
 
-            # --- 4. SAVE ---
+            # --- SAVE ---
             chunk_filename = os.path.join(specific_output_dir, f"graphs_{chunk_counter}.pt")
             if chunk_data_list:
-                torch.save(chunk_data_list, chunk_filename)
+                chunk_tmp = chunk_filename + ".tmp"
+                torch.save(chunk_data_list, chunk_tmp)
+                os.rename(chunk_tmp, chunk_filename)
                 t = time.time() - t0
                 failed_msg = f" ({n_failed} skipped)" if n_failed > 0 else ""
                 print(f"[{label}] Saved chunk {chunk_counter}: {len(chunk_data_list)} events{failed_msg} "
                       f"(Total: {total_events}) - {t:.1f}s", flush=True)
-            
+
             chunk_counter += 1
             if test_mode:
                 print(f"[{label}] Test mode: stopping after 1 chunk.")
@@ -223,20 +251,31 @@ def run_preparation(label, n_workers=24, test_mode=False):
         traceback.print_exc()
         print(f"[{label}] Processed {total_events} events before error. Data saved so far is valid.")
         return
+    finally:
+        pool.shutdown(wait=True)
 
-    # Final leftover
+    # Final leftover (sequential, 1 event — no pool needed)
     if not leftover_df.empty and not test_mode:
         try:
             leftover_df['r_T'], leftover_df['eta'], leftover_df['phi'] = collider_system(leftover_df)
             leftover_df['codex_angle'] = compute_codex_angles(leftover_df)
             leftover_df['module_side'] = leftover_df['module'] % 2
+            leftover_df['module_occupancy_norm'] = (
+                leftover_df.groupby(['eventNumber', 'module'])['module'].transform('count')
+                / leftover_df.groupby('eventNumber')['eventNumber'].transform('count')
+            )
             if not leftover_df.empty:
                 leftover_df['x_raw'], leftover_df['y_raw'], leftover_df['z_raw'] = leftover_df['x'], leftover_df['y'], leftover_df['z']
                 leftover_df[CONT_COLS] = (leftover_df[CONT_COLS].values - MEANS_CONT) / STDS_CONT
                 leftover_df[GLOBAL_COLS] = (leftover_df[GLOBAL_COLS].values - MEANS_GLOB) / STDS_GLOB
-                last_graph = process_event((leftover_df['eventNumber'].iloc[0], leftover_df, is_signal))
-                if last_graph:
-                    torch.save([last_graph], os.path.join(specific_output_dir, f"graphs_{chunk_counter}.pt"))
+                _, tmp_path = process_event((leftover_df['eventNumber'].iloc[0], leftover_df, is_signal))
+                if tmp_path:
+                    last_graph = torch.load(tmp_path, weights_only=False, map_location='cpu')
+                    os.remove(tmp_path)
+                    leftover_path = os.path.join(specific_output_dir, f"graphs_{chunk_counter}.pt")
+                    leftover_tmp = leftover_path + ".tmp"
+                    torch.save([last_graph], leftover_tmp)
+                    os.rename(leftover_tmp, leftover_path)
                     total_events += 1
                     print(f"[{label}] Saved final leftover event (Total: {total_events})")
         except Exception as e:
@@ -244,22 +283,34 @@ def run_preparation(label, n_workers=24, test_mode=False):
 
     print(f"[{label}] COMPLETED! {total_events} graphs in {specific_output_dir}")
 
+
 # ==============================================================================
-# MAIN ENTRY POINT
+# MAIN
 # ==============================================================================
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prepare PyTorch Geometric files for CODEX-b.")
     parser.add_argument("--label", type=str, choices=["MUON", "KL0", "SIGNAL", "ALL"], default="KL0",
-                        help="Data label to process (or 'ALL' for sequential processing).")
+                        help="Data label to process (or 'ALL' for parallel processing).")
     parser.add_argument("--test_mode", action="store_true", help="Process only 1 chunk for testing.")
+    parser.add_argument("--force", action="store_true", help="Delete existing chunks and regenerate from scratch.")
     args = parser.parse_args()
 
     if args.label == "ALL":
-        # Process labels SEQUENTIALLY to avoid memory issues with multiprocessing
         labels = ["SIGNAL", "MUON", "KL0"]
-        print(f"Processing labels sequentially: {labels}")
+        workers_per_label = max(1, 24 // len(labels))
+        print(f"Processing labels IN PARALLEL: {labels} ({workers_per_label} workers each)")
+        procs = []
         for lbl in labels:
-            run_preparation(lbl, n_workers=24, test_mode=args.test_mode)
+            p = Process(target=run_preparation,
+                        args=(lbl, workers_per_label, args.test_mode, args.force))
+            p.start()
+            procs.append((lbl, p))
+        for lbl, p in procs:
+            p.join()
+            if p.exitcode != 0:
+                print(f"[{lbl}] Label FAILED (exit code {p.exitcode})", flush=True)
+            else:
+                print(f"[{lbl}] Label finished successfully.")
     else:
-        run_preparation(args.label, n_workers=24, test_mode=args.test_mode)
+        run_preparation(args.label, n_workers=24, test_mode=args.test_mode, force=args.force)

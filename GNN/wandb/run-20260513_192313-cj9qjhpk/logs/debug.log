@@ -18,3 +18,5 @@ config: {'_wandb': {}}
 2026-05-13 19:23:14,897 INFO    MainThread:842539 [wandb_run.py:_redirect():2495] Redirects installed.
 2026-05-13 19:23:14,904 INFO    MainThread:842539 [wandb_init.py:init():1094] run started, returning control to user process
 2026-05-13 19:23:15,106 INFO    MainThread:842539 [wandb_run.py:_config_callback():1415] config_cb None None {'pos_weight_val': 1.0, 'learning_rate': 0.0004}
+2026-05-14 10:40:20,923 INFO    wandb-AsyncioManager-main:842539 [service_client.py:_forward_responses():134] Reached EOF.
+2026-05-14 10:40:20,924 INFO    wandb-AsyncioManager-main:842539 [mailbox.py:close():155] Closing mailbox, abandoning 1 handles.

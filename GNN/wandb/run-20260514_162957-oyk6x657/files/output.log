@@ -1,0 +1,197 @@
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
+/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/utilities/model_summary/model_summary.py:242: Precision bf16-mixed is not supported by the model summary.  Estimated model size in MB will not be accurate. Using 32 bits instead.
+┏━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃[1;35m [0m[1;35m [0m[1;35m [0m┃[1;35m [0m[1;35mName     [0m[1;35m [0m┃[1;35m [0m[1;35mType             [0m[1;35m [0m┃[1;35m [0m[1;35mParams[0m[1;35m [0m┃[1;35m [0m[1;35mMode [0m[1;35m [0m┃[1;35m [0m[1;35mFLOPs[0m[1;35m [0m┃
+┡━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│[2m [0m[2m0[0m[2m [0m│ model     │ OptimizedModule   │  998 K │ train │     0 │
+│[2m [0m[2m1[0m[2m [0m│ criterion │ BCEWithLogitsLoss │      0 │ train │     0 │
+│[2m [0m[2m2[0m[2m [0m│ train_acc │ BinaryAccuracy    │      0 │ train │     0 │
+│[2m [0m[2m3[0m[2m [0m│ train_auc │ BinaryAUROC       │      0 │ train │     0 │
+│[2m [0m[2m4[0m[2m [0m│ val_acc   │ BinaryAccuracy    │      0 │ train │     0 │
+│[2m [0m[2m5[0m[2m [0m│ val_auc   │ BinaryAUROC       │      0 │ train │     0 │
+└───┴───────────┴───────────────────┴────────┴───────┴───────┘
+[1mTrainable params[0m: 998 K
+[1mNon-trainable params[0m: 0
+[1mTotal params[0m: 998 K
+[1mTotal estimated model params size (MB)[0m: 3
+[1mModules in train mode[0m: 90
+[1mModules in eval mode[0m: 0
+[1mTotal FLOPs[0m: 0
+[2KEpoch 0/99 [38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m 0/-- [2m0:00:00 • -:--:--[0m [2;4m0.00it/s[0m [3mv_num: x657       [0m38;5;56m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;56m━[0m 0/-- [2m0:00:00 • -:--:--[0m [2;4m0.00it/s[0m 
+W0514 16:33:33.065000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/symbolic_shapes.py:6307] [0/0] failed during evaluate_expr(Eq(u0 + 1, 0), hint=None, size_oblivious=True, forcing_spec=False
+E0514 16:33:33.067000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/recording.py:299] [0/0] failed while running evaluate_expr(*(Eq(u0 + 1, 0), None), **{'fx_node': False, 'size_oblivious': True})
+W0514 16:33:38.405000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/symbolic_shapes.py:6307] [3/0] failed during evaluate_expr(Eq(u0 + 1, 0), hint=None, size_oblivious=True, forcing_spec=False
+E0514 16:33:38.406000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/recording.py:299] [3/0] failed while running evaluate_expr(*(Eq(u0 + 1, 0), None), **{'fx_node': False, 'size_oblivious': True})
+W0514 16:33:38.507000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/symbolic_shapes.py:6307] [4/0] failed during evaluate_expr(Eq(u0 + 1, 0), hint=None, size_oblivious=True, forcing_spec=False
+E0514 16:33:38.508000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/recording.py:299] [4/0] failed while running evaluate_expr(*(Eq(u0 + 1, 0), None), **{'fx_node': False, 'size_oblivious': True})
+W0514 16:33:39.442000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/symbolic_shapes.py:6307] [6/0] failed during evaluate_expr(Eq(u0 + 1, 0), hint=None, size_oblivious=True, forcing_spec=False
+E0514 16:33:39.443000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/recording.py:299] [6/0] failed while running evaluate_expr(*(Eq(u0 + 1, 0), None), **{'fx_node': False, 'size_oblivious': True})
+W0514 16:33:39.502000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/symbolic_shapes.py:6307] [7/0] failed during evaluate_expr(Eq(u0 + 1, 0), hint=None, size_oblivious=True, forcing_spec=False
+E0514 16:33:39.503000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/recording.py:299] [7/0] failed while running evaluate_expr(*(Eq(u0 + 1, 0), None), **{'fx_node': False, 'size_oblivious': True})
+W0514 16:33:39.895000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/symbolic_shapes.py:6307] [9/0] failed during evaluate_expr(Eq(u0 + 1, 0), hint=None, size_oblivious=True, forcing_spec=False
+E0514 16:33:39.896000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/recording.py:299] [9/0] failed while running evaluate_expr(*(Eq(u0 + 1, 0), None), **{'fx_node': False, 'size_oblivious': True})
+W0514 16:33:39.939000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/symbolic_shapes.py:6307] [7/1] failed during evaluate_expr(Eq(u0 + 1, 0), hint=None, size_oblivious=True, forcing_spec=False
+E0514 16:33:39.940000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/fx/experimental/recording.py:299] [7/1] failed while running evaluate_expr(*(Eq(u0 + 1, 0), None), **{'fx_node': False, 'size_oblivious': True})
+                                                              [3mval_loss: 1.160   [0m
+                                                              [3mval_acc: 1.000    [0m
+[2K[1A[2K[1A[2K[1A[2KEpoch 0/99 [38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m 0/-- [2m0:00:07 • -:--:--[0m [2;4m0.00it/s[0m [3mv_num: x657       [0m
+W0514 16:34:17.748000 920375 torch_env/torch_env/lib/python3.12/site-packages/torch/_inductor/utils.py:1137] [2/1] Not enough SMs to use max_autotune_gemm mode
+                                                              [3mval_loss: 1.160   [0m
+                                                              [3mval_acc: 1.000    [0m
+                                                              [3mval_auc: 0.000    [0m
+[?25h
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/lightning_train.py", line 333, in <module>
+    train()
+  File "/home3/alejandro.rodriguez/TFM/GNN/lightning_train.py", line 328, in train
+    trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/trainer/trainer.py", line 584, in fit
+    call._call_and_handle_interrupt(
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/trainer/call.py", line 49, in _call_and_handle_interrupt
+    return trainer_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/trainer/trainer.py", line 630, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path, weights_only=weights_only)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/trainer/trainer.py", line 1079, in _run
+    results = self._run_stage()
+              ^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/trainer/trainer.py", line 1123, in _run_stage
+    self.fit_loop.run()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/loops/fit_loop.py", line 217, in run
+    self.advance()
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/loops/fit_loop.py", line 465, in advance
+    self.epoch_loop.run(self._data_fetcher)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 153, in run
+    self.advance(data_fetcher)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 352, in advance
+    batch_output = self.automatic_optimization.run(trainer.optimizers[0], batch_idx, kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 192, in run
+    self._optimizer_step(batch_idx, closure)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 270, in _optimizer_step
+    call._call_lightning_module_hook(
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/trainer/call.py", line 177, in _call_lightning_module_hook
+    output = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/core/module.py", line 1368, in optimizer_step
+    optimizer.step(closure=optimizer_closure)
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/core/optimizer.py", line 154, in step
+    step_output = self._strategy.optimizer_step(self._optimizer, closure, **kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/strategies/strategy.py", line 239, in optimizer_step
+    return self.precision_plugin.optimizer_step(optimizer, model=model, closure=closure, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/plugins/precision/amp.py", line 76, in optimizer_step
+    return super().optimizer_step(optimizer, model=model, closure=closure, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/plugins/precision/precision.py", line 123, in optimizer_step
+    return optimizer.step(closure=closure, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/optim/optimizer.py", line 493, in wrapper
+    out = func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/optim/optimizer.py", line 91, in _use_grad
+    ret = func(self, *args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/optim/adamw.py", line 220, in step
+    loss = closure()
+           ^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/plugins/precision/precision.py", line 109, in _wrap_closure
+    closure_result = closure()
+                     ^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 146, in __call__
+    self._result = self.closure(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 131, in closure
+    step_output = self._step_fn()
+                  ^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 319, in _training_step
+    training_step_output = call._call_strategy_hook(trainer, "training_step", *kwargs.values())
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/trainer/call.py", line 329, in _call_strategy_hook
+    output = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/strategies/strategy.py", line 391, in training_step
+    return self.lightning_module.training_step(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/lightning_model.py", line 59, in training_step
+    logits = self(batch)
+             ^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/lightning_model.py", line 56, in forward
+    return self.model(data).squeeze(-1)
+           ^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py", line 574, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/codex_gnn_model.py", line 169, in forward
+    x = layer(x, edge_index, edge_attr_enc)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/codex_gnn_model.py", line 60, in forward
+    def forward(self, x, edge_index, edge_attr):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py", line 745, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_functorch/aot_autograd.py", line 1184, in forward
+    return compiled_fn(full_args)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 310, in runtime_wrapper
+    all_outs = call_func_at_runtime_with_args(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/utils.py", line 126, in call_func_at_runtime_with_args
+    out = normalize_as_list(f(args))
+                            ^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/utils.py", line 100, in g
+    return f(*args)
+           ^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/autograd/function.py", line 575, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 1585, in forward
+    fw_outs = call_func_at_runtime_with_args(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/utils.py", line 126, in call_func_at_runtime_with_args
+    out = normalize_as_list(f(args))
+                            ^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 490, in wrapper
+    return compiled_fn(runtime_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 672, in inner_fn
+    outs = compiled_fn(args)
+           ^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_inductor/output_code.py", line 466, in __call__
+    return self.current_callable(inputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/torch/_inductor/utils.py", line 2128, in run
+    return model(new_inputs)
+           ^^^^^^^^^^^^^^^^^
+  File "/tmp/torchinductor_alejandro.rodriguez/n3/cn3t7sh7nvy5aa46a7trtz3qsgvarwzeasnfuwpbz2fb5rkrmu35.py", line 640, in call
+    buf0 = empty_strided_cuda((s1, 304), (304, 1), torch.bfloat16)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.96 GiB. GPU 0 has a total capacity of 23.60 GiB of which 2.28 GiB is free. Including non-PyTorch memory, this process has 21.29 GiB memory in use. Of the allocated memory 20.97 GiB is allocated by PyTorch, and 55.10 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

@@ -3,17 +3,22 @@ import glob
 import math
 import time
 import random
+import signal
+import psutil
+import gc
+
 import itertools
 import warnings
 from typing import List, Tuple, Optional
 
 import torch
 import torch._dynamo
+import numpy as np
+
 torch._dynamo.config.capture_scalar_outputs = True
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-# Optimizations and warning suppressions
-torch.set_float32_matmul_precision('medium')
+torch.set_float32_matmul_precision('high')
 warnings.filterwarnings("ignore", ".*No negative samples in targets.*")
 warnings.filterwarnings("ignore", ".*No positive samples in targets.*")
 
@@ -29,220 +34,370 @@ from lightning_model import CODEXLightning
 # ==============================================================================
 
 DATA_DIR = "/lustre/LHCb/alejandro.rodriguez/torch_data"
-BKG_TYPE = "MUON"  # "MUON" or "KL0"
+BKG_TYPE = "MUON"
 SIGNAL_DEC_IDS = ["40114060"]
 BACKGROUND_DEC_IDS = ["30011001" if BKG_TYPE == "MUON" else "38000800"]
 
 OUTPUT_NAME   = f"{BKG_TYPE}_CODEX_GNN"
 
-BATCH_SIZE    = 128  # Balanced: fast but safe for A30 (24GB VRAM) with V4 architecture
+BATCH_SIZE    = 128
 EPOCHS        = 100
-LEARNING_RATE = 4e-4  
+LEARNING_RATE = 5e-4
 
-# LIMIT CHUNKS FOR QUICK TESTS
-MAX_CHUNKS    = 50 # Training with full dataset for maximum AUC
-TRAIN_SPLIT   = 0.8
-PATIENCE      = 10   
-NUM_WORKERS   = 12   # Turbo mode: utilize 12 of 32 CPU cores for data prep
-USE_MULTI_GPU = False # Single GPU is better: avoids DDP deadlocks + larger batch fills GPU
+TRAIN_SPLIT   = 0.8 
+PATIENCE      = 15
+NUM_WORKERS   = 8
+VAL_WORKERS   = 2
+USE_MULTI_GPU = False
+
+# Progressive data expansion schedule:
+#   (max_epoch_exclusive, num_train_pairs)
+#   epochs 0-5:  10 pairs
+#   epochs 6-10:  50 pairs
+#   epochs 11-15: 100 pairs
+#   epochs 16+:  all available pairs
+EXPANSION_SCHEDULE = [
+    (6, 10),
+    (11, 50),
+    (16, 100),
+    (999999, None),  # None means "all"
+]
 
 # ==============================================================================
-# HELPER FUNCTIONS
+# HELPERS
 # ==============================================================================
 
 def get_files(data_dir: str, dec_ids: List[str], data_type: str) -> List[str]:
-    """Retrieves all .pt files for the given decay IDs and data type."""
     files = []
     for dec_id in dec_ids:
         path = os.path.join(data_dir, data_type, dec_id, "*.pt")
-        files.extend(glob.glob(path))
+        files.extend(sorted(glob.glob(path)))
     return files
 
+
 def get_paired_files(sig_list: List[str], bkg_list: List[str]) -> List[Tuple[str, str]]:
-    """Pairs signal and background files, cycling the shorter list if necessary."""
     if not sig_list or not bkg_list:
         raise ValueError("[ERROR] No signal or background files found.")
-    
     if len(sig_list) > len(bkg_list):
         return list(zip(sig_list, itertools.cycle(bkg_list)))
     return list(zip(itertools.cycle(sig_list), bkg_list))
 
+
+def estimate_total_events(files: List[str], sample: int = 3) -> int:
+    """Estimate total number of events averaging sample files."""
+    if not files:
+        return 0
+    n = min(sample, len(files))
+    total = 0
+    for f in files[:n]:
+        d = torch.load(f, weights_only=False, map_location='cpu')
+        total += len(d)
+    avg = total / n
+    return int(avg * len(files))
+
+
 # ==============================================================================
-# DATASET (ITERABLE)
+# ITERABLE DATASET (with progressive expansion + batched edge_attr)
 # ==============================================================================
 
 class ChunkIterableDataset(IterableDataset):
     """
-    An IterableDataset that loads PyTorch Geometric data chunks on the fly.
-    This prevents RAM exhaustion when dealing with large amounts of graphs.
-    
-    If the loaded Data objects lack an edge_index (old preprocessing format),
-    the module-aware graph is built on-the-fly as a fallback.
+    Streams chunk-pairs on the fly, computing edge_attr in batched fashion
+    per chunk. Supports progressive data expansion via expansion_schedule
+    and set_epoch().
     """
-    def __init__(self, file_pairs: List[Tuple[str, str]], is_train: bool = True, train_split: float = 0.8, seed: int = 42):
+    def __init__(self, file_pairs: List[Tuple[str, str]],
+                 expansion_schedule: Optional[List] = None,
+                 is_validation: bool = False):
+        super().__init__()
         self.file_pairs = file_pairs
-        self.is_train = is_train
-        self.train_split = train_split
-        self.seed = seed
+        self.expansion_schedule = expansion_schedule
+        self.is_validation = is_validation
+        self.current_epoch = 0
+
+    def set_epoch(self, epoch: int):
+        self.current_epoch = epoch
+
+    def _num_active_pairs(self) -> int:
+        if self.expansion_schedule is None:
+            return len(self.file_pairs)
+        for max_epoch, n_pairs in self.expansion_schedule:
+            if self.current_epoch < max_epoch:
+                if n_pairs is None:
+                    return len(self.file_pairs)
+                return min(n_pairs, len(self.file_pairs))
+        return len(self.file_pairs)
 
     def __iter__(self):
         import torch.distributed as dist
-        from utils.build_graph import build_velo_graph, compute_edge_attr
-        
-        # 1. Distribute files among GPUs (DDP) if multiple GPUs are used
+        from utils.build_graph import build_velo_graph, compute_batched_edge_attr
+
+
+        # Apply progressive expansion globally BEFORE splitting
+        n_active = self._num_active_pairs()
+        global_pairs = self.file_pairs[:n_active]
+
+        # DDP split
         if dist.is_available() and dist.is_initialized():
             world_size = dist.get_world_size()
             rank = dist.get_rank()
-            per_rank = int(math.ceil(len(self.file_pairs) / float(world_size)))
-            rank_files = self.file_pairs[rank * per_rank : (rank + 1) * per_rank]
+            per_rank = int(math.ceil(len(global_pairs) / float(world_size)))
+            active_pairs = global_pairs[rank * per_rank : (rank + 1) * per_rank]
         else:
-            rank_files = self.file_pairs
+            active_pairs = global_pairs
 
-        # 2. Distribute files among DataLoader workers within this GPU
+        # Worker-level split and SEEDING
         worker_info = get_worker_info()
-        if worker_info is None:
-            worker_files = rank_files
-        else:
-            per_worker = int(math.ceil(len(rank_files) / float(worker_info.num_workers)))
+        if worker_info is not None:
+            # Seed all generators for this worker
+            seed = torch.initial_seed() % 2**32
+            random.seed(seed)
+            np.random.seed(seed)
+            torch.manual_seed(seed)
+            
+            per_worker = int(math.ceil(len(active_pairs) / float(worker_info.num_workers)))
             worker_id = worker_info.id
-            worker_files = rank_files[worker_id * per_worker : (worker_id + 1) * per_worker]
-
-        # Only shuffle the reading order of files during training
-        if self.is_train:
-            random.shuffle(worker_files)
-
-        for sig_file, bkg_file in worker_files:
-            # Load the data chunks into RAM (explicitly to CPU to avoid GPU OOM)
-            sig_data = torch.load(sig_file, weights_only=False, map_location='cpu')
-            bkg_data = torch.load(bkg_file, weights_only=False, map_location='cpu')
+            active_pairs = active_pairs[worker_id * per_worker : (worker_id + 1) * per_worker]
             
-            # Perform train/val split ensuring the same indices are used across epochs
-            sig_data = self.split_chunk_data(sig_data)
-            bkg_data = self.split_chunk_data(bkg_data)
-            
-            combined_data = sig_data + bkg_data
-            
-            if self.is_train:
-                random.shuffle(combined_data)
+            # RAM Logging (log once per chunk per worker)
+            process = psutil.Process()
+            mem_mb = process.memory_info().rss / (1024 * 1024)
+            if worker_id == 0: # Log only from first worker to avoid clutter
+                print(f"[Worker {worker_id}] Current RAM: {mem_mb:.1f} MB | Active pairs: {len(active_pairs)}")
 
-            # Yield graphs one by one
-            for data in combined_data:
-                data.num_nodes = data.x_cont.size(0)
-                
-                # Build graph from scratch only for truly old data (no edge_index)
-                if not hasattr(data, 'edge_index') or data.edge_index is None:
-                    data.edge_index = build_velo_graph(data.pos, data.x_cat)
-                
-                # Ensure edge_index is int64 (may be stored as int32 to save disk)
-                data.edge_index = data.edge_index.to(torch.long)
-                
-                # Always compute edge_attr on-the-fly (<1ms, pure arithmetic)
-                # This avoids storing it on disk (~5GB per chunk → 0)
-                data.edge_attr = compute_edge_attr(data.pos, data.x_cont, data.edge_index)
-                
-                yield data
 
-    def split_chunk_data(self, data_list: list) -> list:
-        """Splits the chunk deterministically based on the fixed seed."""
-        gen = random.Random(self.seed)
-        indices = list(range(len(data_list)))
-        gen.shuffle(indices)
-        
-        split_idx = int(self.train_split * len(data_list))
-        target_indices = indices[:split_idx] if self.is_train else indices[split_idx:]
-        
-        return [data_list[i] for i in target_indices]
+        if not self.is_validation:
+            random.shuffle(active_pairs)
+
+        # ── Timeout handler for hanging torch.load on Lustre ──
+        class _LoadTimeout(Exception):
+            pass
+        def _timeout_handler(signum, frame):
+            raise _LoadTimeout("torch.load timed out (>30 min)")
+        signal.signal(signal.SIGALRM, _timeout_handler)
+
+        for sig_file, bkg_file in active_pairs:
+            # ── Skip corrupt/tiny files (< 100 MB) ──
+            if os.path.getsize(sig_file) < 1e8 or os.path.getsize(bkg_file) < 1e8:
+                continue
+
+            # ── Load sig + bkg with 30 min timeout ──
+            _load_ok = True
+            try:
+                signal.alarm(1800)
+                sig_data = torch.load(sig_file, weights_only=False, map_location='cpu')
+                signal.alarm(1800)
+                bkg_data = torch.load(bkg_file, weights_only=False, map_location='cpu')
+                signal.alarm(0)
+            except Exception:
+                signal.alarm(0)
+                continue
+
+            combined = sig_data + bkg_data
+            if not combined:
+                del sig_data, bkg_data
+                continue
+
+            # ── BATCHED edge_attr computation (if missing) ──
+            if not hasattr(combined[0], 'edge_attr') or combined[0].edge_attr is None:
+                pos_list = []
+                xc_list = []
+                ei_list = []
+                for data in combined:
+                    data.num_nodes = data.x_cont.size(0)
+                    if not hasattr(data, 'edge_index') or data.edge_index is None:
+                        data.edge_index = build_velo_graph(data.pos, data.x_cat)
+                    data.edge_index = data.edge_index.to(torch.long)
+                    pos_list.append(data.pos)
+                    xc_list.append(data.x_cont)
+                    ei_list.append(data.edge_index)
+                ea_list = compute_batched_edge_attr(pos_list, xc_list, ei_list)
+                for data, ea in zip(combined, ea_list):
+                    data.edge_attr = ea
+            else:
+                for data in combined:
+                    data.num_nodes = data.x_cont.size(0)
+                    if not hasattr(data, 'edge_index') or data.edge_index is None:
+                        data.edge_index = build_velo_graph(data.pos, data.x_cat)
+                    data.edge_index = data.edge_index.to(torch.long)
+
+            # Interleave and yield
+            indices = list(range(len(combined)))
+            # Shuffle indices for both train and validation to prevent homogeneous batches
+            random.shuffle(indices)
+
+            for idx in indices:
+                yield combined[idx]
+            
+            # Explicit cleanup without blocking gc.collect
+            del combined
+            del sig_data
+            del bkg_data
+
+
+
+# ==============================================================================
+# CALLBACK: progressive expansion
+# ==============================================================================
+
+class ProgressiveExpansionCallback(pl.Callback):
+    """Updates the training dataset's epoch counter so it expands over time."""
+    def __init__(self, train_dataset: ChunkIterableDataset):
+        self.train_dataset = train_dataset
+
+    def on_train_epoch_start(self, trainer, pl_module):
+        self.train_dataset.set_epoch(trainer.current_epoch)
+
 
 # ==============================================================================
 # MAIN TRAINING PIPELINE
 # ==============================================================================
 
 def train():
-    # 1. Prepare file list
+    # 1. Discover files
     sig_files = get_files(DATA_DIR, SIGNAL_DEC_IDS, "signal")
     bkg_files = get_files(DATA_DIR, BACKGROUND_DEC_IDS, "background")
-    
+
     if not sig_files or not bkg_files:
         print("[ERROR] No data files found.")
         return
 
-    # 2. Limit the number of chunks (for quick testing)
-    if MAX_CHUNKS is not None:
-        sig_files, bkg_files = sig_files[:MAX_CHUNKS], bkg_files[:MAX_CHUNKS]
-        print(f"--> [TEST MODE] Using a maximum of {MAX_CHUNKS} chunks.")
+    print(f"--> Found {len(sig_files)} signal chunks, {len(bkg_files)} background chunks.")
 
-    # Shuffle before pairing
-    random.shuffle(sig_files)
-    random.shuffle(bkg_files)
+    # 2. Split by FILES (not events) to prevent data leakage
+    # Use a fixed seed to ensure deterministic splits across runs
+    rng = random.Random(42)
+    rng.shuffle(sig_files)
+    rng.shuffle(bkg_files)
 
-    paired_files = get_paired_files(sig_files, bkg_files)
-    print(f"--> Dataset: {len(paired_files)} chunk pairs ready to use.")
+    n_sig_train = max(1, int(TRAIN_SPLIT * len(sig_files)))
+    n_bkg_train = max(1, int(TRAIN_SPLIT * len(bkg_files)))
 
-    # 3. Set up DataLoaders (PyTorch Geometric)
-    train_dataset = ChunkIterableDataset(paired_files, is_train=True, train_split=TRAIN_SPLIT)
-    val_dataset = ChunkIterableDataset(paired_files, is_train=False, train_split=TRAIN_SPLIT)
+    sig_train = sig_files[:n_sig_train]
+    sig_val   = sig_files[n_sig_train:]
+    bkg_train = bkg_files[:n_bkg_train]
+    bkg_val   = bkg_files[n_bkg_train:]
 
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, persistent_workers=True, pin_memory=True, prefetch_factor=4)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, persistent_workers=True, pin_memory=True, prefetch_factor=4)
+    train_pairs = get_paired_files(sig_train, bkg_train)
+    val_pairs   = get_paired_files(sig_val,   bkg_val)
 
-    pos_weight_val = float(len(bkg_files)) / max(1, len(sig_files))
-    model = CODEXLightning(pos_weight_val=pos_weight_val, learning_rate=LEARNING_RATE)
+    print(f"--> Train: {len(train_pairs)} chunk pairs ({len(sig_train)} sig, {len(bkg_train)} bkg)")
+    print(f"--> Val:   {len(val_pairs)} chunk pairs ({len(sig_val)} sig, {len(bkg_val)} bkg)")
+
+    # 3. pos_weight calculation
+    # Since we balance sig/bkg 1:1 using itertools.cycle in the Dataset, 
+    # pos_weight should be 1.0 to avoid double-compensating.
+    # 
+    # (Optional) To use natural distribution, comment out cycle() in Dataset 
+    # and uncomment the estimation below:
+    # est_sig = estimate_total_events(sig_train)
+    # est_bkg = estimate_total_events(bkg_train)
+    # pos_weight_val = max(1.0, est_bkg / max(1, est_sig))
     
-    # 4.5 Apply torch.compile on the underlying GNN (not the Lightning wrapper)
-    if hasattr(torch, "compile"):
-        print("--> Enabling torch.compile() on CODEXVetoGNN...")
-        model.model = torch.compile(model.model, dynamic=True)
+    pos_weight_val = 1.0
+    print(f"--> Using pos_weight = {pos_weight_val} (chunks are already balanced 1:1)")
 
-    # 5. Set up Callbacks
-    early_stop_callback = EarlyStopping(
-        monitor="val_loss",
-        min_delta=0.00,
-        patience=PATIENCE,
-        verbose=True,
-        mode="min"
+    # 4. Datasets & DataLoaders
+    train_dataset = ChunkIterableDataset(
+        train_pairs,
+        expansion_schedule=EXPANSION_SCHEDULE,
+        is_validation=False,
+    )
+    val_dataset = ChunkIterableDataset(
+        val_pairs,
+        expansion_schedule=None,
+        is_validation=True,
     )
 
-    os.makedirs("models", exist_ok=True)
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="models",
+    train_loader = DataLoader(
+        train_dataset, batch_size=BATCH_SIZE,
+        num_workers=NUM_WORKERS,
+        persistent_workers=False,
+        pin_memory=True,
+        prefetch_factor=4,
+        worker_init_fn=lambda _: torch.set_num_threads(1),
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=BATCH_SIZE,
+        num_workers=VAL_WORKERS,
+        persistent_workers=(VAL_WORKERS > 0),
+        pin_memory=True,
+        prefetch_factor=4,
+        worker_init_fn=lambda _: torch.set_num_threads(1),
+    )
+
+
+    # 5. Auto-detect feature dimension from first chunk pair
+    print("--> Detecting feature dimension...")
+    _first_sig = torch.load(train_pairs[0][0], weights_only=False, map_location='cpu')
+    detected_n_feats = _first_sig[0].x_cont.shape[-1]
+    print(f"    x_cont has {detected_n_feats} features.")
+
+    model = CODEXLightning(
+        pos_weight_val=pos_weight_val,
+        learning_rate=LEARNING_RATE,
+        model_kwargs={
+            "n_cont_features": detected_n_feats,
+            "hidden_channels": 128,
+            "num_layers": 5,
+            "edge_hidden": 96,
+            "embedding_dim": 24,
+        },
+    )
+
+    # torch.compile with CUDA graphs disabled to avoid OOM from
+    # worst-case batch pre-allocation. Kernel fusion still gives ~15% speedup.
+    if hasattr(torch, "compile"):
+        torch._inductor.config.triton.cudagraphs = False
+        print("--> Enabling torch.compile() on CODEXVetoGNN (CUDA graphs OFF)...")
+        try:
+            model.model = torch.compile(model.model, dynamic=True)
+        except Exception as e:
+            print(f"    torch.compile failed ({e}), running without it.")
+
+    # 6. Callbacks
+    early_stop = EarlyStopping(
+        monitor="val_loss", min_delta=0.00, patience=PATIENCE,
+        verbose=True, mode="min",
+    )
+
+    os.makedirs(f"models/{BKG_TYPE}", exist_ok=True)
+    checkpoint = ModelCheckpoint(
+        dirpath=f"models/{BKG_TYPE}",
         filename=f"{OUTPUT_NAME}_best",
         save_top_k=1,
         monitor="val_loss",
-        mode="min"
+        mode="min",
     )
 
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
-    
-    # 5.5 Initialize Weights & Biases Logger
+    expansion_cb = ProgressiveExpansionCallback(train_dataset)
+
     wandb_logger = WandbLogger(
         project="CODEX-GNN",
         name=OUTPUT_NAME,
-        log_model="all"
+        log_model="all",
     )
 
-
-    # 6. Initialize PyTorch Lightning Trainer
-    if USE_MULTI_GPU and torch.cuda.is_available():
-        devices_config = "auto"
-        strategy_config = "ddp"
-    else:
-        devices_config = [0] if torch.cuda.is_available() else 1
-        strategy_config = "auto"
+    # 7. Trainer
+    devices_config = [0] if torch.cuda.is_available() else 1
 
     trainer = pl.Trainer(
         max_epochs=EPOCHS,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=devices_config,
-        strategy=strategy_config,
-        precision="bf16-mixed",  # BF16: same range as fp32, no overflow risk
-        gradient_clip_val=1.0,   # Prevent gradient explosions
-        callbacks=[early_stop_callback, checkpoint_callback, lr_monitor],
-        logger=wandb_logger      # Enabled wandb tracking
+        strategy="auto",
+        precision="bf16-mixed",
+        gradient_clip_val=1.0,
+        limit_val_batches=150,
+        callbacks=[early_stop, checkpoint, lr_monitor, expansion_cb],
+        logger=wandb_logger,
     )
 
-    # 7. Train
+    # 8. Train
     print("--> Starting training with PyTorch Lightning...")
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+
 
 if __name__ == "__main__":
     start_time = time.time()
