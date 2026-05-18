@@ -35,7 +35,7 @@ class InteractionLayer(MessagePassing):
     Update function:
         x_i' = node_mlp( [x_i ‖ Σ_j m_{ij}] )  +  x_i   (residual)
     """
-    def __init__(self, node_dim, edge_dim, edge_hidden=96, dropout=0.0):
+    def __init__(self, node_dim, edge_dim, edge_hidden=96, dropout=0.3):
         super().__init__(aggr='add')
 
         # Edge MLP: computes message from source node, target node, and edge features

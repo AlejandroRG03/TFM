@@ -1,0 +1,13 @@
+
+[ProgressiveExpansion] Epoch 1: using 20/113 chunk pairs
+Epoch 1/99  0/-- 0:00:00
+" -:--:-- 0.00it/s v_num: 7fsp val_loss: 0.655 val_acc: 0.608 val
+_auc: 0.655^C
+Detected KeyboardInterrupt, attempting graceful shutdown ...
+Epoch 1/99  0/-- 12:18:54
+ " -:--:-- 0.00it/s v_num: 7fsp val_loss: 0.655 val_acc: 0.608 va
+l_auc: 0.655
+wandb:
+wandb: €ÿ View run MUON_CODEX_GNN at: https://wandb.ai/alejandro-
+rg-2014-cern/CODEX-GNN/runs/w9v67fsp
+((torch_env) ) [alejandro.rodriguez@nodo056167 GNN]$

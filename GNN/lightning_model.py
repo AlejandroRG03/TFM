@@ -13,7 +13,7 @@ class WarmupReduceLROnPlateau(torch.optim.lr_scheduler.ReduceLROnPlateau):
     After warmup, delegates to the standard ReduceLROnPlateau logic.
     """
     def __init__(self, optimizer, warmup_epochs=2, warmup_start_lr=1e-6,
-                 factor=0.3, patience=2, min_lr=1e-6):
+                 factor=0.3, patience=4, min_lr=1e-6):
         super().__init__(optimizer, mode='min', factor=factor,
                          patience=patience, min_lr=min_lr)
         self.warmup_epochs = warmup_epochs
@@ -97,7 +97,7 @@ class CODEXLightning(pl.LightningModule):
             warmup_epochs=2,
             warmup_start_lr=1e-6,
             factor=0.3,
-            patience=2,
+            patience=4,
             min_lr=1e-6,
         )
 

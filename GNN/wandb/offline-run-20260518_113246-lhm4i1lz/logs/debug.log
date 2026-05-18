@@ -1,0 +1,64 @@
+2026-05-18 11:32:46,952 INFO    MainThread:1137293 [wandb_setup.py:_flush():81] Current SDK version is 0.26.1
+2026-05-18 11:32:46,953 INFO    MainThread:1137293 [wandb_setup.py:_flush():81] Configure stats pid to 1137293
+2026-05-18 11:32:46,953 INFO    MainThread:1137293 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2026-05-18 11:32:46,954 INFO    MainThread:1137293 [wandb_init.py:setup_run_log_directory():723] Logging user logs to wandb/offline-run-20260518_113246-lhm4i1lz/logs/debug.log
+2026-05-18 11:32:46,954 INFO    MainThread:1137293 [wandb_init.py:setup_run_log_directory():724] Logging internal logs to wandb/offline-run-20260518_113246-lhm4i1lz/logs/debug-internal.log
+2026-05-18 11:32:46,954 INFO    MainThread:1137293 [wandb_init.py:init():850] calling init triggers
+2026-05-18 11:32:46,954 INFO    MainThread:1137293 [wandb_init.py:init():855] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2026-05-18 11:32:46,955 INFO    MainThread:1137293 [wandb_init.py:init():898] starting backend
+2026-05-18 11:32:47,056 WARNING MainThread:1137293 [wandb_init.py:init():1595] [no run ID] interrupted
+Traceback (most recent call last):
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/wandb_init.py", line 1586, in init
+    run = wi.init(run_settings, run_config, run_printer)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/wandb_init.py", line 900, in init
+    service = self._wl.ensure_service()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/wandb_setup.py", line 392, in ensure_service
+    self._connection = service_connection.connect_to_service(
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_connection.py", line 51, in connect_to_service
+    return _start_and_connect_service(asyncer, settings)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_connection.py", line 64, in _start_and_connect_service
+    proc = service_process.start(settings)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_process.py", line 33, in start
+    return _start(
+           ^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/sdk/lib/service/service_process.py", line 72, in _start
+    get_sentry().configure_scope(tags=dict(settings), process_context="service")
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/analytics/sentry.py", line 49, in wrapper
+    if not self._booted and not self._boot():
+                                ^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/wandb/analytics/sentry.py", line 97, in _boot
+    import sentry_sdk  # type: ignore
+    ^^^^^^^^^^^^^^^^^
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/sentry_sdk/__init__.py", line 1, in <module>
+    from sentry_sdk import profiler
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/sentry_sdk/profiler/__init__.py", line 1, in <module>
+    from sentry_sdk.profiler.continuous_profiler import (
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/sentry_sdk/profiler/continuous_profiler.py", line 13, in <module>
+    from sentry_sdk.envelope import Envelope
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/sentry_sdk/envelope.py", line 5, in <module>
+    from sentry_sdk.session import Session
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/sentry_sdk/session.py", line 4, in <module>
+    from sentry_sdk.utils import format_timestamp
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/sentry_sdk/utils.py", line 31, in <module>
+    from aiohttp.web_exceptions import HTTPException as AIOHttpHttpException
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/aiohttp/__init__.py", line 6, in <module>
+    from .client import (
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/aiohttp/client.py", line 38, in <module>
+    from yarl import URL
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/yarl/__init__.py", line 2, in <module>
+    from ._url import URL, cache_clear, cache_configure, cache_info
+  File "/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/yarl/_url.py", line 33, in <module>
+    from ._path import normalize_path, normalize_path_segments
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1091, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1190, in get_data
+KeyboardInterrupt

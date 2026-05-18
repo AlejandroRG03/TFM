@@ -1,0 +1,24 @@
+GPU available: True (cuda), used: False
+TPU available: False, using: 0 TPU cores
+/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/trainer/setup.py:175: GPU available but not used. You can set it by doing `Trainer(accelerator='gpu')`.
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+┏━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name  ┃ Type   ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ layer │ Linear │      2 │ train │     0 │
+└───┴───────┴────────┴────────┴───────┴───────┘
+Trainable params: 2                                                                                                                                                                                                                        
+Non-trainable params: 0                                                                                                                                                                                                                    
+Total params: 2                                                                                                                                                                                                                            
+Total estimated model params size (MB): 0                                                                                                                                                                                                  
+Modules in train mode: 1                                                                                                                                                                                                                   
+Modules in eval mode: 0                                                                                                                                                                                                                    
+Total FLOPs: 0                                                                                                                                                                                                                             
+`Trainer.fit` stopped: `max_epochs=2` reached.
+--> Dataset __iter__ called
+--> Dataset __iter__ called
+--> Dataset __iter__ called
+--> Dataset __iter__ called
+--> Callback on_train_epoch_start
+--> Callback on_train_epoch_start
+Epoch 1/1  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4/-- 0:00:00 • -:--:-- 530.04it/s  
