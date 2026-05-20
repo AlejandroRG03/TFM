@@ -1,0 +1,36 @@
+/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/callbacks/model_checkpoint.py:881: Checkpoint directory /home3/alejandro.rodriguez/TFM/GNN/models/MUON exists and is not empty.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1]
+/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packages/pytorch_lightning/utilities/model_summary/model_summary.py:242: Precision bf16-mixed is not supported by the model summary.  Estimated model size in MB will not be accurate. Using 32 bits instead.
+┏━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃[1;35m [0m[1;35m [0m[1;35m [0m┃[1;35m [0m[1;35mName     [0m[1;35m [0m┃[1;35m [0m[1;35mType             [0m[1;35m [0m┃[1;35m [0m[1;35mParams[0m[1;35m [0m┃[1;35m [0m[1;35mMode [0m[1;35m [0m┃[1;35m [0m[1;35mFLOPs[0m[1;35m [0m┃
+┡━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│[2m [0m[2m0[0m[2m [0m│ model     │ CODEXVetoGNN      │  811 K │ train │     0 │
+│[2m [0m[2m1[0m[2m [0m│ criterion │ BCEWithLogitsLoss │      0 │ train │     0 │
+│[2m [0m[2m2[0m[2m [0m│ train_acc │ BinaryAccuracy    │      0 │ train │     0 │
+│[2m [0m[2m3[0m[2m [0m│ train_auc │ BinaryAUROC       │      0 │ train │     0 │
+│[2m [0m[2m4[0m[2m [0m│ val_acc   │ BinaryAccuracy    │      0 │ train │     0 │
+│[2m [0m[2m5[0m[2m [0m│ val_auc   │ BinaryAUROC       │      0 │ train │     0 │
+└───┴───────────┴───────────────────┴────────┴───────┴───────┘
+[1mTrainable params[0m: 811 K
+[1mNon-trainable params[0m: 0
+[1mTotal params[0m: 811 K
+[1mTotal estimated model params size (MB)[0m: 3
+[1mModules in train mode[0m: 105
+[1mModules in eval mode[0m: 0
+[1mTotal FLOPs[0m: 0
+[2K/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packa
+ges/pytorch_lightning/trainer/connectors/data_connector.py:434: The
+'val_dataloader' does not have many workers which may be a bottleneck. Consider
+increasing the value of the `num_workers` argument` to `num_workers=31` in the
+`DataLoader` to improve performance.
+[2K/home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/lib/python3.12/site-packa0:00:00[0m [2;4m0.15it/s[0m --:--[0m [2;4m0.00it/s[0m 
+ges/pytorch_lightning/trainer/connectors/data_connector.py:434: The
+'train_dataloader' does not have many workers which may be a bottleneck.
+Consider increasing the value of the `num_workers` argument` to `num_workers=31`
+in the `DataLoader` to improve performance.
+[2Kty Checking [38;5;56m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m 2/2 [2m0:00:07 • 0:00:00[0m [2;4m0.15it/s[0m 
+[2K[ProgressiveExpansion] Epoch 0: using 20/113 chunk pairs
+[2KEpoch 0/99 [38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m 0/-- [2m0:00:00 • -:--:--[0m [2;4m0.00it/s[0m [3mv_num: hwy7       [0m38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m 0/-- [2m0:00:00 • -:--:--[0m [2;4m0.00it/s[0m 
+                                                              [3mval_loss: 0.688   [0m
+                                                              [3mval_acc: 0.516    [0m
+[2KEpoch 0/99 [38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;237m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m[38;5;56m━[0m 179/-- [2m0:19:35 • -:--:--[0m [2;4m0.23it/s[0m [3mv_num: hwy7[0m[0mm: hwy7[0m[0m_num: hwy7[0mm[3mv_num: hwy7[0m

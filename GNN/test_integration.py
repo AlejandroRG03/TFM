@@ -11,10 +11,12 @@ sys.path.append('/home3/alejandro.rodriguez/TFM/GNN/utils')
 import torch
 import glob
 import time
+sys.path.append('/home3/alejandro.rodriguez/TFM/GNN')
 from build_graph import build_velo_graph, compute_edge_attr, compute_batched_edge_attr
 from codex_gnn_model import CODEXVetoGNN
 from lightning_model import CODEXLightning
 from torch_geometric.data import Data, Batch
+from lightning_train import load_chunk as _load_chunk
 
 
 def test_classic_pipeline():
@@ -26,8 +28,8 @@ def test_classic_pipeline():
     sig_files = sorted(glob.glob('/lustre/LHCb/alejandro.rodriguez/torch_data/signal/40114060/*.pt'))
     bkg_files = sorted(glob.glob('/lustre/LHCb/alejandro.rodriguez/torch_data/background/30011001/*.pt'))
 
-    sig_data = torch.load(sig_files[0], weights_only=False, map_location='cpu')[:4]
-    bkg_data = torch.load(bkg_files[0], weights_only=False, map_location='cpu')[:4]
+    sig_data = _load_chunk(sig_files[0])[:4]
+    bkg_data = _load_chunk(bkg_files[0])[:4]
 
     print(f"Loaded {len(sig_data)} signal + {len(bkg_data)} background events")
 

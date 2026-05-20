@@ -26,6 +26,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from lightning_model import CODEXLightning
+import torch.multiprocessing as mp
 
 # ==============================================================================
 # CONFIGURATION
@@ -38,23 +39,21 @@ BACKGROUND_DEC_IDS = ["30011001" if BKG_TYPE == "MUON" else "38000800"]
 
 OUTPUT_NAME   = f"{BKG_TYPE}_CODEX_GNN"
 
-BATCH_SIZE    = 32   # Reduced from 128 to avoid CUDA OOM (~16k edges/graph × 128 = 2.1M edges/batch)
-ACCUM_STEPS   = 4    # Accumulate 4 steps → effective batch size of 128
+BATCH_SIZE    = 32     # Avoid CUDA OOM (~16k edges/graph × 128 = 2.1M edges/batch)
+ACCUM_STEPS   = 4      # Accumulate 4 steps → effective batch size of 128
 EPOCHS        = 100
 LEARNING_RATE = 5e-4
 
 TRAIN_SPLIT   = 0.8
 PATIENCE      = 15
-NUM_WORKERS   = 0      # Set to 0 to avoid multiprocessing fork deadlocks (mmap loads in 0.6s, so async is no longer needed)
-VAL_WORKERS   = 0
-MAX_VAL_PAIRS = 5      # Limit validation pairs (150 batches × 128 = 19200 events)
-USE_MULTI_GPU = False
+NUM_WORKERS   = 4      # 4 workers prefetching chunks while GPU computes
+VAL_WORKERS   = 2
+MP_CONTEXT    = 'spawn' # CRITICAL: 'fork' deadlocks with mmap on Lustre
+MAX_VAL_PAIRS = 5      # Limit validation pairs
+USE_MULTI_GPU = False   # Single GPU — DDP causes NCCL timeouts with slow Lustre I/O
 
 # Progressive data expansion schedule:
 #   (max_epoch_exclusive, num_train_pairs)
-#   epochs 0-1:  20 pairs  (~40 min/epoch)
-#   epochs 2-6:  70 pairs  (~140 min/epoch)
-#   epochs 7+:   all pairs (~280 min/epoch)
 EXPANSION_SCHEDULE = [
     (2,  20),
     (7,  70),
@@ -81,32 +80,43 @@ def get_paired_files(sig_list: List[str], bkg_list: List[str]) -> List[Tuple[str
     return list(zip(itertools.cycle(sig_list), bkg_list))
 
 
-def estimate_total_events(files: List[str], sample: int = 3) -> int:
-    """Estimate total number of events averaging sample files."""
-    if not files:
-        return 0
-    n = min(sample, len(files))
-    total = 0
-    for f in files[:n]:
-        d = torch.load(f, weights_only=False, map_location='cpu')
-        total += len(d)
-    avg = total / n
-    return int(avg * len(files))
+# ==============================================================================
+# CHUNK LOADING (supports both legacy & repacked formats)
+# ==============================================================================
+
+def _is_repacked(filepath: str) -> bool:
+    """Check if file has been repacked via marker file."""
+    return os.path.exists(filepath + '.repacked')
 
 
-# ==============================================================================
-# CHUNK LOADING HELPERS (supports both legacy & repacked formats)
-# ==============================================================================
+def _detect_n_features(filepath: str) -> int:
+    """
+    Read just enough of a repacked file to determine n_cont_features.
+    Uses mmap=False to avoid contaminating process state before fork.
+    Only reads the slices to find the shape — does NOT load all data.
+    """
+    # For repacked files, we can read just the metadata dict keys
+    raw = torch.load(filepath, weights_only=True, map_location='cpu', mmap=True)
+    n_feats = raw['data.x_cont'].shape[-1]
+    del raw
+    gc.collect()
+    return n_feats
+
 
 def _load_repacked_chunk(filepath: str) -> list:
     """
-    Load a chunk file in the repacked (collated tensor dict) format.
-    Uses mmap=True for near-instant loading — only pages accessed are read.
-    Returns a list of PyG Data objects reconstructed from the collated tensors.
+    Load a repacked chunk using mmap + per-graph slice cloning.
+
+    This is the critical hot path. The key insight:
+      - torch.load(mmap=True) maps the file in ~0.01s (no actual I/O)
+      - Cloning individual graph slices (~KB each) triggers tiny page faults
+      - Total: ~3s for 5700 graphs from a 6.5 GB file on Lustre
+
+    DO NOT clone the full tensor first — that forces reading all 6.5 GB
+    sequentially (135s) and defeats the purpose of mmap.
     """
     raw = torch.load(filepath, weights_only=True, map_location='cpu', mmap=True)
 
-    # Discover data keys from the saved dict
     data_keys = [k[5:] for k in raw if k.startswith('data.')]
     num_graphs = raw['slices.y'].size(0) - 1
 
@@ -114,14 +124,15 @@ def _load_repacked_chunk(filepath: str) -> list:
     for i in range(num_graphs):
         g = Data()
         for key in data_keys:
-            s_start = raw[f'slices.{key}'][i].item()
-            s_end   = raw[f'slices.{key}'][i + 1].item()
-            tensor  = raw[f'data.{key}']
-            # edge_index is (2, E), concatenated along dim=1
+            s = raw[f'slices.{key}']
+            s0, s1 = int(s[i]), int(s[i + 1])
+            tensor = raw[f'data.{key}']
             if key == 'edge_index':
-                g[key] = tensor[:, s_start:s_end]
+                g[key] = tensor[:, s0:s1].clone().long()
+            elif key == 'x_cat':
+                g[key] = tensor[s0:s1].clone().long()
             else:
-                g[key] = tensor[s_start:s_end]
+                g[key] = tensor[s0:s1].clone()
         g.num_nodes = g.x_cont.size(0)
         graphs.append(g)
 
@@ -130,18 +141,16 @@ def _load_repacked_chunk(filepath: str) -> list:
 
 def _load_legacy_chunk(filepath: str) -> list:
     """Load a chunk file in the legacy format (pickled list of Data objects)."""
-    return torch.load(filepath, weights_only=False, map_location='cpu')
-
-
-def _is_repacked(filepath: str) -> bool:
-    """
-    Quick check if file is in repacked format by attempting weights_only load.
-    Caches result via a sidecar marker file to avoid repeated probing.
-    """
-    marker = filepath + '.repacked'
-    if os.path.exists(marker):
-        return True
-    return False
+    data_list = torch.load(filepath, weights_only=False, map_location='cpu')
+    # Ensure dtypes are correct
+    for d in data_list:
+        if hasattr(d, 'edge_index') and d.edge_index is not None:
+            d.edge_index = d.edge_index.long()
+        if hasattr(d, 'x_cat'):
+            d.x_cat = d.x_cat.long()
+        if not hasattr(d, 'num_nodes') or d.num_nodes is None:
+            d.num_nodes = d.x_cont.size(0)
+    return data_list
 
 
 def load_chunk(filepath: str) -> list:
@@ -152,17 +161,13 @@ def load_chunk(filepath: str) -> list:
 
 
 # ==============================================================================
-# ITERABLE DATASET (with progressive expansion)
+# ITERABLE DATASET
 # ==============================================================================
 
 class ChunkIterableDataset(IterableDataset):
     """
     Streams chunk-pairs on the fly. Supports progressive data expansion
     via expansion_schedule and set_epoch().
-
-    current_epoch is a plain int — updated by ProgressiveExpansionCallback.
-    DataLoader respawns workers each epoch (persistent_workers=False),
-    so workers inherit the updated int via pickle at spawn time.
     """
     def __init__(self, file_pairs: List[Tuple[str, str]],
                  expansion_schedule: Optional[List] = None,
@@ -179,7 +184,6 @@ class ChunkIterableDataset(IterableDataset):
     def _num_active_pairs(self) -> int:
         if self.expansion_schedule is None:
             return len(self.file_pairs)
-
         for max_epoch, n_pairs in self.expansion_schedule:
             if self.current_epoch < max_epoch:
                 return len(self.file_pairs) if n_pairs is None else min(n_pairs, len(self.file_pairs))
@@ -192,7 +196,7 @@ class ChunkIterableDataset(IterableDataset):
         n_active = self._num_active_pairs()
         global_pairs = self.file_pairs[:n_active]
 
-        # DDP split
+        # DDP split (if running multi-GPU)
         if dist.is_available() and dist.is_initialized():
             world_size = dist.get_world_size()
             rank = dist.get_rank()
@@ -209,38 +213,41 @@ class ChunkIterableDataset(IterableDataset):
             np.random.seed(seed)
             torch.manual_seed(seed)
 
-            per_worker = int(math.ceil(len(active_pairs) / float(worker_info.num_workers)))
+            n_workers = worker_info.num_workers
             worker_id = worker_info.id
+            per_worker = int(math.ceil(len(active_pairs) / float(n_workers)))
             active_pairs = active_pairs[worker_id * per_worker : (worker_id + 1) * per_worker]
 
-            process = psutil.Process()
-            mem_mb = process.memory_info().rss / (1024 * 1024)
             if worker_id == 0:
-                print(f"[Epoch {self.current_epoch}][Worker {worker_id}] "
-                      f"RAM: {mem_mb:.1f} MB | Active pairs: {n_active}/{len(self.file_pairs)}")
+                process = psutil.Process()
+                mem_mb = process.memory_info().rss / (1024 * 1024)
+                print(f"[Epoch {self.current_epoch}][Worker 0] "
+                      f"RAM: {mem_mb:.0f} MB | Pairs: {len(active_pairs)} "
+                      f"(of {n_active}/{len(self.file_pairs)} total)")
 
         if not self.is_validation:
             random.shuffle(active_pairs)
 
         for sig_file, bkg_file in active_pairs:
-            # ── Skip corrupt/tiny files (< 100 MB) ──
+            # Skip corrupt/tiny files
             try:
                 if os.path.getsize(sig_file) < 1e8 or os.path.getsize(bkg_file) < 1e8:
                     continue
             except OSError:
                 continue
 
-            # ── Load sig + bkg ──
+            # Load sig + bkg
             try:
                 t0 = time.monotonic()
                 sig_data = load_chunk(sig_file)
                 bkg_data = load_chunk(bkg_file)
                 dt = time.monotonic() - t0
                 if worker_info and worker_info.id == 0:
-                    print(f"[Worker 0] Loaded pair in {dt:.1f}s "
+                    print(f"[W0] Loaded pair in {dt:.1f}s "
                           f"({len(sig_data)}+{len(bkg_data)} graphs)")
             except Exception as e:
-                print(f"[WARN] Failed to load pair: {e}")
+                print(f"[WARN] Failed to load pair "
+                      f"({os.path.basename(sig_file)}, {os.path.basename(bkg_file)}): {e}")
                 continue
 
             combined = sig_data + bkg_data
@@ -249,43 +256,28 @@ class ChunkIterableDataset(IterableDataset):
             if not combined:
                 continue
 
-            # ── Ensure x_cat is LongTensor (required by Embedding) ──
-            # ── Ensure num_nodes is set ──
-            for data in combined:
-                if data.x_cat.dtype != torch.long:
-                    data.x_cat = data.x_cat.long()
-                if hasattr(data, 'edge_index') and data.edge_index is not None and data.edge_index.dtype != torch.long:
-                    data.edge_index = data.edge_index.long()
-                if not hasattr(data, 'num_nodes') or data.num_nodes is None:
-                    data.num_nodes = data.x_cont.size(0)
-
-            # ── BATCHED edge_attr computation ONLY if missing ──
+            # Compute edge_attr ONLY if missing (legacy files without it)
             if not hasattr(combined[0], 'edge_attr') or combined[0].edge_attr is None:
                 from utils.build_graph import build_velo_graph, compute_batched_edge_attr
-                pos_list = []
-                xc_list = []
-                ei_list = []
+                pos_list, xc_list, ei_list = [], [], []
                 for data in combined:
                     if not hasattr(data, 'edge_index') or data.edge_index is None:
                         data.edge_index = build_velo_graph(data.pos, data.x_cat)
-                    data.edge_index = data.edge_index.to(torch.long)
+                    data.edge_index = data.edge_index.long()
                     pos_list.append(data.pos)
                     xc_list.append(data.x_cont)
                     ei_list.append(data.edge_index)
                 ea_list = compute_batched_edge_attr(pos_list, xc_list, ei_list)
                 for data, ea in zip(combined, ea_list):
                     data.edge_attr = ea
-            # NOTE: When edge_attr already exists (normal case), we skip
-            # the expensive per-graph loop entirely — data is ready to use.
 
-            # Interleave and yield
+            # Shuffle and yield
             indices = list(range(len(combined)))
             random.shuffle(indices)
             for idx in indices:
                 yield combined[idx]
 
             del combined
-            gc.collect()
 
 
 # ==============================================================================
@@ -293,11 +285,7 @@ class ChunkIterableDataset(IterableDataset):
 # ==============================================================================
 
 class ProgressiveExpansionCallback(pl.Callback):
-    """
-    Updates train_dataset.current_epoch at the START of each epoch.
-    Workers are respawned at that point (persistent_workers=False),
-    so they pickle the dataset with the already-updated epoch number.
-    """
+    """Updates train_dataset.current_epoch at the START of each epoch."""
     def __init__(self, train_dataset: ChunkIterableDataset):
         self.train_dataset = train_dataset
 
@@ -340,15 +328,30 @@ def train():
     train_pairs = get_paired_files(sig_train, bkg_train)
     val_pairs   = get_paired_files(sig_val,   bkg_val)
 
-    # Limit validation pairs to avoid loading unused data
     if len(val_pairs) > MAX_VAL_PAIRS:
         val_pairs = val_pairs[:MAX_VAL_PAIRS]
 
     print(f"--> Train: {len(train_pairs)} chunk pairs ({len(sig_train)} sig, {len(bkg_train)} bkg)")
     print(f"--> Val:   {len(val_pairs)} chunk pairs (limited to {MAX_VAL_PAIRS})")
 
+    # Quick validation: check all files exist and are repacked
+    print("--> Validating file pairs...")
+    n_bad = 0
+    for sig, bkg in train_pairs + val_pairs:
+        for fp in (sig, bkg):
+            if not os.path.exists(fp):
+                print(f"  [WARN] Missing: {fp}")
+                n_bad += 1
+            elif not _is_repacked(fp) and os.path.getsize(fp) < 1e8:
+                print(f"  [WARN] Too small and not repacked: {os.path.basename(fp)}")
+                n_bad += 1
+    if n_bad == 0:
+        print("  All files OK.")
+    else:
+        print(f"  {n_bad} issues found (will skip at runtime).")
+
     pos_weight_val = 1.0
-    print(f"--> Using pos_weight = {pos_weight_val} (chunks are already balanced 1:1)")
+    print(f"--> Using pos_weight = {pos_weight_val}")
 
     # 3. Datasets & DataLoaders
     train_dataset = ChunkIterableDataset(
@@ -362,30 +365,44 @@ def train():
         is_validation=True,
     )
 
+    # Use 'spawn' context to avoid fork+mmap deadlocks on Lustre.
+    # With 'spawn', each worker starts as a fresh Python process (no
+    # inherited mmap state), then imports modules and pickles the dataset.
+    # persistent_workers=True is essential: spawn startup costs ~10s per
+    # worker, but only happens once per training run.
+    spawn_ctx = mp.get_context(MP_CONTEXT)
+
     train_loader = DataLoader(
         train_dataset, batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
-        persistent_workers=False,
+        persistent_workers=(NUM_WORKERS > 0),
         pin_memory=True,
-        prefetch_factor=None,
-        worker_init_fn=lambda _: torch.set_num_threads(1),
+        prefetch_factor=2 if NUM_WORKERS > 0 else None,
+        multiprocessing_context=spawn_ctx if NUM_WORKERS > 0 else None,
     )
     val_loader = DataLoader(
         val_dataset, batch_size=BATCH_SIZE,
         num_workers=VAL_WORKERS,
-        persistent_workers=False,  # FIX: was True, caused memory leak
+        persistent_workers=(VAL_WORKERS > 0),
         pin_memory=True,
-        prefetch_factor=None,
-        worker_init_fn=lambda _: torch.set_num_threads(1),
+        prefetch_factor=2 if VAL_WORKERS > 0 else None,
+        multiprocessing_context=spawn_ctx if VAL_WORKERS > 0 else None,
     )
 
-    # 4. Auto-detect feature dimension from first chunk pair
+    # 4. Auto-detect feature dimension
+    #    Read metadata only — do NOT use load_chunk() here because it
+    #    would create mmap state in the main process.  With 'spawn'
+    #    workers this is less critical, but keeping it lightweight is
+    #    still good practice.
     print("--> Detecting feature dimension...")
-    _first_sig = load_chunk(train_pairs[0][0])
-    detected_n_feats = _first_sig[0].x_cont.shape[-1]
+    if _is_repacked(train_pairs[0][0]):
+        detected_n_feats = _detect_n_features(train_pairs[0][0])
+    else:
+        _first = torch.load(train_pairs[0][0], weights_only=False, map_location='cpu')
+        detected_n_feats = _first[0].x_cont.shape[-1]
+        del _first
+        gc.collect()
     print(f"    x_cont has {detected_n_feats} features.")
-    del _first_sig
-    gc.collect()
 
     model = CODEXLightning(
         pos_weight_val=pos_weight_val,
@@ -423,18 +440,17 @@ def train():
         log_model="all",
     )
 
-    # 6. Trainer
-    devices_config = [0] if torch.cuda.is_available() else 1
-
+    # 6. Trainer — single GPU, no DDP
     trainer = pl.Trainer(
         max_epochs=EPOCHS,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        devices=devices_config,
+        devices=[0],
         strategy="auto",
         precision="bf16-mixed",
         gradient_clip_val=1.0,
-        accumulate_grad_batches=ACCUM_STEPS,  # Effective batch = BATCH_SIZE * ACCUM_STEPS = 128
+        accumulate_grad_batches=ACCUM_STEPS,
         limit_val_batches=150,
+        num_sanity_val_steps=0,
         callbacks=[early_stop, checkpoint, lr_monitor, expansion_cb],
         logger=wandb_logger,
     )
