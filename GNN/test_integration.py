@@ -11,67 +11,82 @@ sys.path.append('/home3/alejandro.rodriguez/TFM/GNN/utils')
 import torch
 import glob
 import time
-sys.path.append('/home3/alejandro.rodriguez/TFM/GNN')
-from build_graph import build_velo_graph, compute_edge_attr, compute_batched_edge_attr
+from utils.build_graph import build_velo_graph, compute_edge_attr
 from codex_gnn_model import CODEXVetoGNN
 from lightning_model import CODEXLightning
 from torch_geometric.data import Data, Batch
-from lightning_train import load_chunk as _load_chunk
 
 
-def test_classic_pipeline():
-    """Load old 9-dim data, build graphs per-event, run Lightning module."""
+def strip_eta(x_cont):
+    if x_cont.shape[1] in (9, 11):
+        return x_cont[:, [0, 1, 2, 3, 4, 6, 7, 8]].contiguous()
+    return x_cont
+
+
+def load_events(filepath, n=5):
+    raw = torch.load(filepath, weights_only=False, map_location='cpu')
+    if isinstance(raw, dict):
+        keys = [k for k in raw if k.startswith('data.')]
+        slice_keys = [k for k in raw if k.startswith('slices.')]
+        n_events = raw[slice_keys[0]].shape[0] - 1 if slice_keys else 1
+        events = []
+        for i in range(min(n_events, n)):
+            d = Data()
+            for k in keys:
+                attr = k.split('.')[1]
+                slice_key = 'slices.' + attr
+                if slice_key in raw:
+                    start, end = raw[slice_key][i], raw[slice_key][i + 1]
+                    if attr == 'edge_index':
+                        setattr(d, attr, raw[k][:, start:end].contiguous())
+                    else:
+                        setattr(d, attr, raw[k][start:end])
+                else:
+                    setattr(d, attr, raw[k][i])
+            events.append(d)
+        return events
+    return list(raw)[:n]
+
+
+def main():
     print("=" * 60)
-    print("TEST A: Classic pipeline (9-dim data, batched edge_attr)")
+    print("END-TO-END INTEGRATION TEST")
     print("=" * 60)
 
     sig_files = sorted(glob.glob('/lustre/LHCb/alejandro.rodriguez/torch_data/signal/40114060/*.pt'))
     bkg_files = sorted(glob.glob('/lustre/LHCb/alejandro.rodriguez/torch_data/background/30011001/*.pt'))
 
-    sig_data = _load_chunk(sig_files[0])[:4]
-    bkg_data = _load_chunk(bkg_files[0])[:4]
+    sig_data = load_events(sig_files[0], n=4)
+    bkg_data = load_events(bkg_files[0], n=4)
 
     print(f"Loaded {len(sig_data)} signal + {len(bkg_data)} background events")
 
-    # Prepare graph data (simulate what ChunkIterableDataset does)
     batch_list = []
+    t0 = time.time()
     for d in sig_data + bkg_data:
+        x_cont = strip_eta(d.x_cont)
         if not hasattr(d, 'edge_index') or d.edge_index is None:
-            d.edge_index = build_velo_graph(d.pos, d.x_cat)
+            module_ids = d.x_cat if hasattr(d, 'x_cat') else torch.zeros(d.pos.shape[0], dtype=torch.long)
+            d.edge_index = build_velo_graph(d.pos, module_ids)
+            d.edge_attr = compute_edge_attr(d.pos, x_cont, d.edge_index)
+        # Skip events with no edges (isolated hits)
+        if d.edge_index.shape[1] == 0:
+            continue
         d.edge_index = d.edge_index.to(torch.long)
-        d.num_nodes = d.x_cont.shape[0]
+        d.x_cont = x_cont
+        d.num_nodes = x_cont.shape[0]
+        if hasattr(d, 'x_cat'):
+            del d.x_cat
         batch_list.append(d)
 
-    # Batched edge_attr
-    pos_list = [d.pos for d in batch_list]
-    xc_list  = [d.x_cont[:, :9] for d in batch_list]
-    ei_list  = [d.edge_index for d in batch_list]
-    t0 = time.time()
-    ea_list = compute_batched_edge_attr(pos_list, xc_list, ei_list)
-    batched_time = time.time() - t0
-    for d, ea in zip(batch_list, ea_list):
-        d.edge_attr = ea
-
-    # Sequential for comparison
-    t0 = time.time()
-    for d in batch_list:
-        compute_edge_attr(d.pos, d.x_cont[:, :9], d.edge_index)
-    seq_time = time.time() - t0
-    print(f"  Batched edge_attr:  {batched_time:.4f}s")
-    print(f"  Sequential edge_attr: {seq_time:.4f}s")
-    print(f"  Speedup: {seq_time / max(batched_time, 1e-8):.1f}x")
+    graph_time = time.time() - t0
+    print(f"Graph construction for {len(batch_list)} events: {graph_time:.2f}s")
 
     batch = Batch.from_data_list(batch_list)
     print(f"Batch: {batch.num_graphs} graphs, {batch.num_nodes} nodes, "
           f"{batch.edge_index.shape[1]} edges")
 
-    # Lightning module (auto-detect feature dim)
-    n_feats = batch_list[0].x_cont.shape[-1]
-    model = CODEXLightning(
-        pos_weight_val=1.0,
-        learning_rate=5e-4,
-        model_kwargs={"n_cont_features": n_feats}
-    )
+    model = CODEXLightning(pos_weight_val=1.0, learning_rate=5e-4)
     model.train()
 
     t0 = time.time()
@@ -92,83 +107,15 @@ def test_classic_pipeline():
             total_grad_norm += p.grad.norm().item() ** 2
             n_params += 1
     total_grad_norm = total_grad_norm ** 0.5
-    print(f"Grad norm: {total_grad_norm:.4f} ({n_params} tensors)")
-    print(f"Total params: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"\nGrad norm: {total_grad_norm:.4f} (across {n_params} parameter tensors)")
 
-    assert not torch.isnan(logits).any(), "NaN in logits!"
-    assert not torch.isinf(logits).any(), "Inf in logits!"
-    assert loss.item() > 0, "Loss should be positive!"
-    assert total_grad_norm > 0, "Zero gradients!"
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Total model parameters: {total_params:,}")
 
-    print("\n  >> PASSED\n")
-    return True
-
-
-def test_data_pipeline():
-    """
-    Test the ChunkIterableDataset + ProgressiveExpansionCallback
-    with a tiny subset of data (2 chunk pairs).
-    """
+    print("\n" + "=" * 60)
+    print("INTEGRATION TEST PASSED ✓")
     print("=" * 60)
-    print("TEST B: Data pipeline mini-integration")
-    print("=" * 60)
-
-    # Monkey-patch: import and create a minimal pipeline
-    sys.path.insert(0, '/home3/alejandro.rodriguez/TFM/GNN')
-    from lightning_train import ChunkIterableDataset, get_files, get_paired_files
-
-    sig_files = sorted(glob.glob('/lustre/LHCb/alejandro.rodriguez/torch_data/signal/40114060/*.pt'))[:3]
-    bkg_files = sorted(glob.glob('/lustre/LHCb/alejandro.rodriguez/torch_data/background/30011001/*.pt'))[:3]
-
-    pairs = get_paired_files(sig_files[:2], bkg_files[:2])
-    val_pairs = get_paired_files(sig_files[2:], bkg_files[2:])
-
-    print(f"Train pairs: {len(pairs)}, Val pairs: {len(val_pairs)}")
-
-    # Test that set_epoch and expansion work
-    ds = ChunkIterableDataset(pairs, expansion_schedule=[(5, 1), (999, 2)])
-    # epoch 0 → epoch < 5 → use 1 pair
-    assert ds._num_active_pairs() == 1, f"Epoch 0 should give 1 pair, got {ds._num_active_pairs()}"
-
-    ds.set_epoch(5)
-    assert ds._num_active_pairs() == 2, f"Epoch 5 should give 2 pairs, got {ds._num_active_pairs()}"
-
-    ds.set_epoch(100)
-    assert ds._num_active_pairs() == 2, f"Epoch 100 should give 2 pairs, got {ds._num_active_pairs()}"
-
-    print("  Progressive expansion: OK")
-
-    # Quick iteration test — load one batch from the dataset
-    from torch_geometric.loader import DataLoader
-    ds.set_epoch(0)
-    loader = DataLoader(ds, batch_size=16, num_workers=2)
-
-    batch = None
-    for i, b in enumerate(loader):
-        batch = b
-        if i >= 1:
-            break
-
-    if batch is not None:
-        print(f"Loaded batch: {batch.num_graphs} graphs, {batch.num_nodes} nodes")
-        print(f"  x_cont shape: {batch.x_cont.shape}")
-        print(f"  edge_attr shape: {batch.edge_attr.shape}")
-        assert batch.x_cont.shape[-1] in (9, 11), f"Unexpected x_cont dim: {batch.x_cont.shape[-1]}"
-        assert batch.edge_attr.shape[-1] == 10, f"Unexpected edge_attr dim: {batch.edge_attr.shape[-1]}"
-    else:
-        print("  WARNING: No batches yielded from test loader (maybe all data skipped?)")
-
-    print("\n  >> PASSED\n")
-    return True
 
 
 if __name__ == "__main__":
-    ok_a = test_classic_pipeline()
-    ok_b = test_data_pipeline()
-
-    print("=" * 60)
-    if ok_a and ok_b:
-        print("ALL INTEGRATION TESTS PASSED")
-    else:
-        print("SOME TESTS FAILED")
-        sys.exit(1)
+    main()

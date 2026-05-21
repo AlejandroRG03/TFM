@@ -12,6 +12,7 @@ import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import Process, get_context
 from torch_geometric.data import Data
+from torch_geometric.data.collate import collate
 from build_graph import build_velo_graph, compute_edge_attr
 
 sys.path.append("/home3/alejandro.rodriguez/python_modules")
@@ -28,8 +29,7 @@ VAR_NAMES = [
     'beamspotX', 'beamspotY'
 ]
 
-CONT_COLS    = ['x', 'y', 'z', 'r_T', 'phi', 'eta', 'n_pix', 'codex_angle', 'module_side']
-NEW_FEATS    = ['module_occupancy_norm']
+CONT_COLS    = ['x', 'y', 'z', 'r_T', 'phi', 'n_pix', 'codex_angle', 'module_side']
 GLOBAL_COLS  = ['nVtx_per_event', 'nClu_per_event', 'nTrk_per_event']
 
 try:
@@ -71,32 +71,24 @@ def process_event(args):
         if len(df_event) < 3:
             return (event_id, None)
 
-        feat_cols = CONT_COLS + NEW_FEATS
-        x_cont = torch.tensor(df_event[feat_cols].values, dtype=torch.float)
-        x_cat = torch.tensor(df_event['module'].values, dtype=torch.long)
+        x_cont = torch.tensor(df_event[CONT_COLS].values, dtype=torch.float)
+        module_ids = torch.tensor(df_event['module'].values, dtype=torch.long)
         global_attr = torch.tensor(df_event[GLOBAL_COLS].iloc[0].values, dtype=torch.float).unsqueeze(0)
         pos = torch.tensor(df_event[['x_raw', 'y_raw', 'z_raw']].values, dtype=torch.float)
         y = torch.tensor([is_signal], dtype=torch.float)
 
         edge_index = build_velo_graph(
-            pos, x_cat,
+            pos, module_ids,
             intra_radius=5.0, inter_k=3, skip_k=1, max_inter_dist=15.0
         )
 
         if edge_index.shape[1] == 0:
             return (event_id, None)
 
-        # NEW: Compute edge attributes during preparation
         edge_attr = compute_edge_attr(pos, x_cont, edge_index)
 
-        degree = torch.bincount(edge_index[0], minlength=len(df_event)).float()
-        max_deg = degree.max()
-        if max_deg > 0:
-            degree = degree / max_deg
-        x_cont = torch.cat([x_cont, degree.unsqueeze(-1)], dim=-1)
-
         data = Data(
-            x_cont=x_cont, x_cat=x_cat, pos=pos,
+            x_cont=x_cont, pos=pos,
             edge_index=edge_index.to(torch.int32),
             edge_attr=edge_attr,
             y=y, global_attr=global_attr,
@@ -133,17 +125,21 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False):
     if os.path.exists(specific_output_dir):
         for f in os.listdir(specific_output_dir):
             if f.startswith("graphs_") and f.endswith(".pt"):
-                try:
-                    idx = int(f.replace("graphs_", "").replace(".pt", ""))
-                    existing_chunks.add(idx)
-                except ValueError:
-                    pass
+                if os.path.exists(os.path.join(specific_output_dir, f + '.repacked')):
+                    try:
+                        idx = int(f.replace("graphs_", "").replace(".pt", ""))
+                        existing_chunks.add(idx)
+                    except ValueError:
+                        pass
 
     if force and existing_chunks:
         print(f"[{label}] --force set, removing {len(existing_chunks)} existing chunks...")
         for f in os.listdir(specific_output_dir):
             if f.startswith("graphs_") and f.endswith(".pt"):
                 os.remove(os.path.join(specific_output_dir, f))
+                marker = os.path.join(specific_output_dir, f + '.repacked')
+                if os.path.exists(marker):
+                    os.remove(marker)
         existing_chunks.clear()
         print(f"[{label}] All chunks deleted, starting fresh.")
 
@@ -199,13 +195,9 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False):
                 continue
 
             # --- FEATURE ENGINEERING ---
-            df_to_process['r_T'], df_to_process['eta'], df_to_process['phi'] = collider_system(df_to_process)
+            df_to_process['r_T'], _, df_to_process['phi'] = collider_system(df_to_process)
             df_to_process['codex_angle'] = compute_codex_angles(df_to_process)
             df_to_process['module_side'] = df_to_process['module'] % 2
-            df_to_process['module_occupancy_norm'] = (
-                df_to_process.groupby(['eventNumber', 'module'])['module'].transform('count')
-                / df_to_process.groupby('eventNumber')['eventNumber'].transform('count')
-            )
             df_to_process['x_raw'], df_to_process['y_raw'], df_to_process['z_raw'] = df_to_process['x'], df_to_process['y'], df_to_process['z']
 
             # --- NORMALISATION ---
@@ -230,12 +222,32 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False):
 
             total_events += len(chunk_data_list)
 
-            # --- SAVE ---
+            # --- SAVE AS REPACKED DICT FORMAT ---
             chunk_filename = os.path.join(specific_output_dir, f"graphs_{chunk_counter}.pt")
             if chunk_data_list:
+                for d in chunk_data_list:
+                    if not hasattr(d, 'num_nodes') or d.num_nodes is None:
+                        d.num_nodes = d.x_cont.size(0)
+                collated_data, slices, _ = collate(
+                    chunk_data_list[0].__class__,
+                    data_list=chunk_data_list,
+                    increment=False,
+                    add_batch=False
+                )
+                save_dict = {}
+                for key in collated_data.keys():
+                    val = collated_data[key]
+                    if isinstance(val, torch.Tensor):
+                        save_dict[f'data.{key}'] = val.contiguous()
+                for key in slices:
+                    save_dict[f'slices.{key}'] = slices[key].contiguous()
+
                 chunk_tmp = chunk_filename + ".tmp"
-                torch.save(chunk_data_list, chunk_tmp)
+                torch.save(save_dict, chunk_tmp)
                 os.rename(chunk_tmp, chunk_filename)
+                with open(chunk_filename + '.repacked', 'w') as f:
+                    f.write(f'{len(chunk_data_list)}\n')
+
                 t = time.time() - t0
                 failed_msg = f" ({n_failed} skipped)" if n_failed > 0 else ""
                 print(f"[{label}] Saved chunk {chunk_counter}: {len(chunk_data_list)} events{failed_msg} "
@@ -257,13 +269,9 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False):
     # Final leftover (sequential, 1 event — no pool needed)
     if not leftover_df.empty and not test_mode:
         try:
-            leftover_df['r_T'], leftover_df['eta'], leftover_df['phi'] = collider_system(leftover_df)
+            leftover_df['r_T'], _, leftover_df['phi'] = collider_system(leftover_df)
             leftover_df['codex_angle'] = compute_codex_angles(leftover_df)
             leftover_df['module_side'] = leftover_df['module'] % 2
-            leftover_df['module_occupancy_norm'] = (
-                leftover_df.groupby(['eventNumber', 'module'])['module'].transform('count')
-                / leftover_df.groupby('eventNumber')['eventNumber'].transform('count')
-            )
             if not leftover_df.empty:
                 leftover_df['x_raw'], leftover_df['y_raw'], leftover_df['z_raw'] = leftover_df['x'], leftover_df['y'], leftover_df['z']
                 leftover_df[CONT_COLS] = (leftover_df[CONT_COLS].values - MEANS_CONT) / STDS_CONT
@@ -272,10 +280,29 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False):
                 if tmp_path:
                     last_graph = torch.load(tmp_path, weights_only=False, map_location='cpu')
                     os.remove(tmp_path)
+                    data_list = [last_graph]
+                    if not hasattr(last_graph, 'num_nodes') or last_graph.num_nodes is None:
+                        last_graph.num_nodes = last_graph.x_cont.size(0)
+                    collated_data, slices, _ = collate(
+                        data_list[0].__class__,
+                        data_list=data_list,
+                        increment=False,
+                        add_batch=False
+                    )
+                    save_dict = {}
+                    for key in collated_data.keys():
+                        val = collated_data[key]
+                        if isinstance(val, torch.Tensor):
+                            save_dict[f'data.{key}'] = val.contiguous()
+                    for key in slices:
+                        save_dict[f'slices.{key}'] = slices[key].contiguous()
+
                     leftover_path = os.path.join(specific_output_dir, f"graphs_{chunk_counter}.pt")
                     leftover_tmp = leftover_path + ".tmp"
-                    torch.save([last_graph], leftover_tmp)
+                    torch.save(save_dict, leftover_tmp)
                     os.rename(leftover_tmp, leftover_path)
+                    with open(leftover_path + '.repacked', 'w') as f:
+                        f.write('1\n')
                     total_events += 1
                     print(f"[{label}] Saved final leftover event (Total: {total_events})")
         except Exception as e:

@@ -27,6 +27,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from lightning_model import CODEXLightning
 import torch.multiprocessing as mp
+from pytorch_lightning.strategies import DDPStrategy
+from datetime import timedelta
 
 # ==============================================================================
 # CONFIGURATION
@@ -45,12 +47,12 @@ EPOCHS        = 100
 LEARNING_RATE = 5e-4
 
 TRAIN_SPLIT   = 0.8
-PATIENCE      = 15
-NUM_WORKERS   = 4      # 4 workers prefetching chunks while GPU computes
-VAL_WORKERS   = 2
+PATIENCE      = 10
+NUM_WORKERS   = 1       # 1 worker evita contención en OSTs y swap (136 GB RAM sobran)
+VAL_WORKERS   = 1
 MP_CONTEXT    = 'spawn' # CRITICAL: 'fork' deadlocks with mmap on Lustre
-MAX_VAL_PAIRS = 5      # Limit validation pairs
-USE_MULTI_GPU = False   # Single GPU — DDP causes NCCL timeouts with slow Lustre I/O
+MAX_VAL_PAIRS = 5       # Limit validation pairs
+USE_MULTI_GPU = False   # DDP causes NCCL timeouts with slow Lustre I/O (single GPU)
 
 # Progressive data expansion schedule:
 #   (max_epoch_exclusive, num_train_pairs)
@@ -105,17 +107,14 @@ def _detect_n_features(filepath: str) -> int:
 
 def _load_repacked_chunk(filepath: str) -> list:
     """
-    Load a repacked chunk using mmap + per-graph slice cloning.
+    Load a repacked chunk entirely into RAM (sequential read).
 
-    This is the critical hot path. The key insight:
-      - torch.load(mmap=True) maps the file in ~0.01s (no actual I/O)
-      - Cloning individual graph slices (~KB each) triggers tiny page faults
-      - Total: ~3s for 5700 graphs from a 6.5 GB file on Lustre
-
-    DO NOT clone the full tensor first — that forces reading all 6.5 GB
-    sequentially (135s) and defeats the purpose of mmap.
+    With Lustre OSTs at 100% capacity, the thousands of tiny page faults
+    from mmap + clone are catastrophically slow (~13 min per chunk).
+    A single sequential read saturates the available I/O bandwidth and is
+    far more reliable on near-full OSTs.
     """
-    raw = torch.load(filepath, weights_only=True, map_location='cpu', mmap=True)
+    raw = torch.load(filepath, weights_only=True, map_location='cpu', mmap=False)
 
     data_keys = [k[5:] for k in raw if k.startswith('data.')]
     num_graphs = raw['slices.y'].size(0) - 1
@@ -129,8 +128,6 @@ def _load_repacked_chunk(filepath: str) -> list:
             tensor = raw[f'data.{key}']
             if key == 'edge_index':
                 g[key] = tensor[:, s0:s1].clone().long()
-            elif key == 'x_cat':
-                g[key] = tensor[s0:s1].clone().long()
             else:
                 g[key] = tensor[s0:s1].clone()
         g.num_nodes = g.x_cont.size(0)
@@ -146,8 +143,6 @@ def _load_legacy_chunk(filepath: str) -> list:
     for d in data_list:
         if hasattr(d, 'edge_index') and d.edge_index is not None:
             d.edge_index = d.edge_index.long()
-        if hasattr(d, 'x_cat'):
-            d.x_cat = d.x_cat.long()
         if not hasattr(d, 'num_nodes') or d.num_nodes is None:
             d.num_nodes = d.x_cont.size(0)
     return data_list
@@ -228,56 +223,148 @@ class ChunkIterableDataset(IterableDataset):
         if not self.is_validation:
             random.shuffle(active_pairs)
 
-        for sig_file, bkg_file in active_pairs:
-            # Skip corrupt/tiny files
+        # ═══════════════════════════════════════════════════════════════════
+        # TRAINING: double-buffer con hilo loader en background
+        #   - Hilo loader: carga chunks secuencialmente y los mete en cola
+        #   - Hilo main: extrae de la cola y yield graphs a la GPU
+        #   - La GPU nunca espera porque el siguiente par ya está en RAM
+        # ═══════════════════════════════════════════════════════════════════
+        if not self.is_validation:
+            import threading
+            import queue as queue_mod
+
+            load_queue = queue_mod.Queue(maxsize=3)
+            stop_event = threading.Event()
+
+            def _loader():
+                try:
+                    for sig_file, bkg_file in active_pairs:
+                        if stop_event.is_set():
+                            break
+
+                        try:
+                            if os.path.getsize(sig_file) < 1e8 or os.path.getsize(bkg_file) < 1e8:
+                                continue
+                        except OSError:
+                            continue
+
+                        try:
+                            t0 = time.monotonic()
+                            # ── Carga concurrente: sig(OST:1) || bkg(OST:0) ──
+                            # torch.load libera el GIL → I/O real en paralelo
+                            load_results = {}
+                            load_errors = {}
+                            def _load_one(key, path):
+                                try:
+                                    load_results[key] = load_chunk(path)
+                                except Exception as e:
+                                    load_errors[key] = e
+                            t_sig = threading.Thread(
+                                target=_load_one, args=('sig', sig_file), daemon=True)
+                            t_bkg = threading.Thread(
+                                target=_load_one, args=('bkg', bkg_file), daemon=True)
+                            t_sig.start()
+                            t_bkg.start()
+                            t_sig.join()
+                            t_bkg.join()
+                            if load_errors:
+                                raise RuntimeError(f"Concurrent load errors: {load_errors}")
+                            sig_data = load_results['sig']
+                            bkg_data = load_results['bkg']
+                            dt = time.monotonic() - t0
+                            if worker_info and worker_info.id == 0:
+                                print(f"[W0] Loaded pair in {dt:.1f}s "
+                                      f"({len(sig_data)}+{len(bkg_data)} graphs)")
+                        except Exception as e:
+                            print(f"[WARNING] Failed to load pair "
+                                  f"({os.path.basename(sig_file)}, {os.path.basename(bkg_file)}): {e}")
+                            continue
+
+                        combined = sig_data + bkg_data
+                        del sig_data, bkg_data
+
+                        if not combined:
+                            continue
+
+                        if not hasattr(combined[0], 'edge_attr') or combined[0].edge_attr is None:
+                            print("[WARNING] Computing edge_attr on the fly! This is slow!")
+                            from utils.build_graph import compute_edge_attr
+                            for data in combined:
+                                data.edge_index = data.edge_index.long()
+                                data.edge_attr = compute_edge_attr(data.pos, data.x_cont, data.edge_index)
+
+                        indices = list(range(len(combined)))
+                        random.shuffle(indices)
+
+                        # Back-pressure: timeout en put para detectar stop_event
+                        while True:
+                            try:
+                                load_queue.put((combined, indices), timeout=1.0)
+                                break
+                            except queue_mod.Full:
+                                if stop_event.is_set():
+                                    return
+                finally:
+                    load_queue.put(None)
+
+            loader = threading.Thread(target=_loader, daemon=True)
+            loader.start()
+
             try:
-                if os.path.getsize(sig_file) < 1e8 or os.path.getsize(bkg_file) < 1e8:
+                while True:
+                    item = load_queue.get()
+                    if item is None:
+                        break
+                    combined, indices = item
+                    for idx in indices:
+                        yield combined[idx]
+                    del combined
+            finally:
+                stop_event.set()
+
+        # ═══════════════════════════════════════════════════════════════════
+        # VALIDATION: bucle síncrono original (pocos pares, rápida)
+        # ═══════════════════════════════════════════════════════════════════
+        else:
+            for sig_file, bkg_file in active_pairs:
+                try:
+                    if os.path.getsize(sig_file) < 1e8 or os.path.getsize(bkg_file) < 1e8:
+                        continue
+                except OSError:
                     continue
-            except OSError:
-                continue
 
-            # Load sig + bkg
-            try:
-                t0 = time.monotonic()
-                sig_data = load_chunk(sig_file)
-                bkg_data = load_chunk(bkg_file)
-                dt = time.monotonic() - t0
-                if worker_info and worker_info.id == 0:
-                    print(f"[W0] Loaded pair in {dt:.1f}s "
-                          f"({len(sig_data)}+{len(bkg_data)} graphs)")
-            except Exception as e:
-                print(f"[WARN] Failed to load pair "
-                      f"({os.path.basename(sig_file)}, {os.path.basename(bkg_file)}): {e}")
-                continue
+                try:
+                    t0 = time.monotonic()
+                    sig_data = load_chunk(sig_file)
+                    bkg_data = load_chunk(bkg_file)
+                    dt = time.monotonic() - t0
+                    if worker_info and worker_info.id == 0:
+                        print(f"[W0] Loaded pair in {dt:.1f}s "
+                              f"({len(sig_data)}+{len(bkg_data)} graphs)")
+                except Exception as e:
+                    print(f"[WARNING] Failed to load pair "
+                          f"({os.path.basename(sig_file)}, {os.path.basename(bkg_file)}): {e}")
+                    continue
 
-            combined = sig_data + bkg_data
-            del sig_data, bkg_data
+                combined = sig_data + bkg_data
+                del sig_data, bkg_data
 
-            if not combined:
-                continue
+                if not combined:
+                    continue
 
-            # Compute edge_attr ONLY if missing (legacy files without it)
-            if not hasattr(combined[0], 'edge_attr') or combined[0].edge_attr is None:
-                from utils.build_graph import build_velo_graph, compute_batched_edge_attr
-                pos_list, xc_list, ei_list = [], [], []
-                for data in combined:
-                    if not hasattr(data, 'edge_index') or data.edge_index is None:
-                        data.edge_index = build_velo_graph(data.pos, data.x_cat)
-                    data.edge_index = data.edge_index.long()
-                    pos_list.append(data.pos)
-                    xc_list.append(data.x_cont)
-                    ei_list.append(data.edge_index)
-                ea_list = compute_batched_edge_attr(pos_list, xc_list, ei_list)
-                for data, ea in zip(combined, ea_list):
-                    data.edge_attr = ea
+                if not hasattr(combined[0], 'edge_attr') or combined[0].edge_attr is None:
+                    print("[WARNING] Computing edge_attr on the fly! This is slow!")
+                    from utils.build_graph import compute_edge_attr
+                    for data in combined:
+                        data.edge_index = data.edge_index.long()
+                        data.edge_attr = compute_edge_attr(data.pos, data.x_cont, data.edge_index)
 
-            # Shuffle and yield
-            indices = list(range(len(combined)))
-            random.shuffle(indices)
-            for idx in indices:
-                yield combined[idx]
+                indices = list(range(len(combined)))
+                random.shuffle(indices)
+                for idx in indices:
+                    yield combined[idx]
 
-            del combined
+                del combined
 
 
 # ==============================================================================
@@ -377,7 +464,7 @@ def train():
         num_workers=NUM_WORKERS,
         persistent_workers=(NUM_WORKERS > 0),
         pin_memory=True,
-        prefetch_factor=2 if NUM_WORKERS > 0 else None,
+        prefetch_factor=8 if NUM_WORKERS > 0 else None,
         multiprocessing_context=spawn_ctx if NUM_WORKERS > 0 else None,
     )
     val_loader = DataLoader(
@@ -385,7 +472,7 @@ def train():
         num_workers=VAL_WORKERS,
         persistent_workers=(VAL_WORKERS > 0),
         pin_memory=True,
-        prefetch_factor=2 if VAL_WORKERS > 0 else None,
+        prefetch_factor=8 if VAL_WORKERS > 0 else None,
         multiprocessing_context=spawn_ctx if VAL_WORKERS > 0 else None,
     )
 
@@ -412,7 +499,6 @@ def train():
             "hidden_channels": 128,
             "num_layers": 5,
             "edge_hidden": 96,
-            "embedding_dim": 24,
         },
     )
 
@@ -440,16 +526,15 @@ def train():
         log_model="all",
     )
 
-    # 6. Trainer — single GPU, no DDP
+    # 6. Trainer
     trainer = pl.Trainer(
         max_epochs=EPOCHS,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        devices=[0],
-        strategy="auto",
+        devices=-1 if USE_MULTI_GPU else [0],
+        strategy=DDPStrategy(timeout=timedelta(minutes=60), find_unused_parameters=False) if USE_MULTI_GPU else "auto",
         precision="bf16-mixed",
         gradient_clip_val=1.0,
         accumulate_grad_batches=ACCUM_STEPS,
-        limit_val_batches=150,
         num_sanity_val_steps=0,
         callbacks=[early_stop, checkpoint, lr_monitor, expansion_cb],
         logger=wandb_logger,

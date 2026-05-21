@@ -1,67 +1,190 @@
-# Informe Técnico: Arquitectura, Motivación Física y Diseño del Modelo CODEX-b GNN
+# Technical Report: Architecture, Physical Motivation and Design of the CODEX-b GNN System
 
-Este documento expone con rigor científico y técnico la arquitectura del sistema de veto para CODEX-b. Se centra en la justificación física de las decisiones de diseño y en la lógica subyacente al procesamiento de datos extraídos del subdetector VELO de LHCb.
-
----
-
-## 1. Motivación Física y Construcción del Grafo
-
-La construcción del grafo explota la topología del detector VELO y la cinemática de las trayectorias de las partículas. El objetivo es discriminar eventos a nivel de grafo, distinguiendo entre eventos de fondo (como muones penetrantes) y eventos de señal (partículas de vida larga o LLPs).
-
-### 1.1. Topología del Grafo: Un Modelo de Propagación de Partículas
-El grafo se diseña para capturar la coherencia espacial de las trazas. Dado que el volumen del VELO está libre del campo magnético principal, las partículas viajan en trayectorias esencialmente rectas. La topología de conexión se estructura así:
-
-1.  **Aristas Intra-módulo (Clustering local)**:
-    *   **Motivación**: Conecta hits dentro del mismo sensor ($r < 5$ mm). Esto permite que la red identifique depósitos de carga compartidos o electrones secundarios (rayos delta) como parte de una misma interacción local.
-2.  **Aristas Inter-módulo (KNN hacia M±1)**:
-    *   **Motivación**: Las trazas atraviesan los planos de silicio secuencialmente. Conectar un hit en la capa $k$ con sus $k$-vecinos más cercanos en $k+1$ preselecciona segmentos de traza congruentes con un bajo ángulo de dispersión.
-3.  **Aristas de Salto (Skip-Edges, KNN hacia M±2)**:
-    *   **Motivación**: Proporcionan robustez ante ineficiencias de los sensores o regiones muertas. Permiten que la información "salte" un plano, manteniendo la continuidad topológica de la traza a lo largo del detector.
-
-### 1.2. Mapeo y Selección de Atributos (Features Reales)
-Para que el modelo aprenda la física del detector, inyectamos una serie de variables cuidadosamente seleccionadas y normalizadas:
-
-*   **Atributos del Nodo (Continuos)**:
-    *   **Posición ($x, y, z$)**: Coordenadas espaciales normalizadas.
-    *   **Geometría Cilíndrica ($r_T, \phi, \eta$)**: Fundamentales para romper simetrías. $r_T$ detecta el origen radial, $\phi$ la dirección acimutal y $\eta$ la pseudorapidez (ángulo respecto al haz).
-    *   **Contexto de Hit (`n_pix`, `codex_angle`)**: El número de píxeles activados y el ángulo proyectivo hacia el volumen de CODEX-b.
-    *   **Ocupación y Grado (`module_occupancy_norm`, `degree`)**: Indican la densidad de hits en el módulo y cuántas conexiones tiene el nodo, ayudando a distinguir trazas aisladas de regiones de alta multiplicidad.
-*   **Atributos del Nodo (Categóricos)**:
-    *   **`module`**: El identificador del sensor (0-51). Se procesa mediante un **Embedding** para que la red aprenda las particularidades geométricas y de aceptación de cada plano de silicio.
-*   **Atributos de las Aristas (Geometric Edges)**:
-    *   Vectores de 10 dimensiones que codifican la relación relativa entre dos hits: diferencias espaciales ($\Delta x, \Delta y, \Delta z$), distancia euclídea, deltas cilíndricas ($\Delta r_T, \Delta \phi$) y el vector dirección unitario ($u_x, u_y, u_z$).
-*   **Atributos Globales (Contexto del Evento)**:
-    *   **`nVtx_per_event`, `nClu_per_event`, `nTrk_per_event`**: Proporcionan una visión macroscópica de la complejidad del evento (pileup), permitiendo que la red ajuste su respuesta según el ruido ambiental.
+This document provides a rigorous scientific and technical exposition of the complete veto system for CODEX-b. It covers everything from data extraction from the LHCb VELO subdetector to the training pipeline, detailing each design decision and its physical justification.
 
 ---
 
-## 2. Construcción del Modelo: Interaction Network (IN)
+## 1. Data Preparation Pipeline
 
-La arquitectura central utiliza una **Interaction Network (IN)** (V3), optimizada para asimilar restricciones geométricas mediante paso de mensajes.
+### 1.1. ROOT Extraction (`prepare_torch_files.py`)
 
-### 2.1. Dinámica del Paso de Mensajes (Message Passing)
-En la IN, las aristas no son simples enlaces, sino funciones activas:
-*   **Edge MLP (Relational Model)**: Ingiere $[x_i, x_j, edge\_attr_{ij}]$ y produce un mensaje rico en información relacional. Aprende a suprimir conexiones físicamente imposibles y a reforzar aquellas que forman trayectorias coherentes.
-*   **Node MLP (Object Model)**: Actualiza el estado del nodo basándose en su estado anterior y la suma de mensajes recibidos. Tras varias capas, el nodo "conoce" la trayectoria completa a la que pertenece.
+Raw data resides in ROOT files (`Ntuple VeloMultiTuple`) at `/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/`. The pipeline:
 
-### 2.2. Profundidad y Diseño de Capas
-*   **Profundidad (5 capas)**: Permite una propagación de información de hasta 5 módulos de distancia. Esto es crítico para capturar la linealidad global de las trazas de señal que atraviesan gran parte del VELO.
-*   **Estabilidad (Pre-LN y SiLU)**: Aplicamos **LayerNorm** antes del procesamiento y usamos la función de activación **SiLU**. Esto evita el desvanecimiento de gradientes y asegura que la red pueda aprender variaciones sutiles en los ángulos de las partículas.
+1. **Chunked reading**: `uproot.iterate()` reads the tree in ~100 MB blocks to avoid RAM saturation.
+2. **Feature engineering**: `r_T`, `phi` (cylindrical coordinates) and `codex_angle` (projective angle toward CODEX-b) are computed via functions in `python_modules`.
+3. **Normalisation**: Continuous variables are normalised using precomputed means and standard deviations stored in `stats/global_normalization_stats.json`. This ensures numerical stability during training.
+4. **Graph construction**: Each event is processed individually via `build_velo_graph()` (see Section 2).
+5. **Repacked format storage**: Graphs are collated into a dictionary with contiguous tensors (`data.x_cont`, `data.edge_index`, etc.) + `slices` for indexing. This enables efficient mmap-based loading.
 
-### 2.3. Pooling y Clasificación (Graph Readout)
-Dado que el objetivo es vetar el evento completo, se proyecta el grafo a un vector de decisión:
-*   **Simplified Jumping Knowledge**: Extraemos características de la capa 3 (fragmentos de trazas) y la capa 5 (visión global).
-*   **Pooling Híbrido**: Combinamos **Attentional Aggregation** (que asigna pesos de importancia a los hits) con **Global Max Pool** (que captura los hits más extremos o energéticos).
-*   **Fusión Global**: Concatenamos el resultado del pooling con las variables globales (`nVtx`, `nClu`, `nTrk`) antes de pasar por el clasificador final (MLP de 3 capas con Dropout para evitar overfitting).
+**Dataset variables:**
+
+| Type | Variables | Dimensionality |
+|---|---|---|
+| Continuous (node) | `x`, `y`, `z`, `r_T`, `phi`, `n_pix`, `codex_angle`, `module_side` | 8 |
+| Raw position | `x_raw`, `y_raw`, `z_raw` (mm) | 3 |
+| Global (event) | `nVtx_per_event`, `nClu_per_event`, `nTrk_per_event` | 3 |
+| Edge | Spatial differences + distance + cylindrical deltas + direction vector | 10 |
+
+**z-coverage**: Hits with `z >= -150` mm are kept (active VELO region).
+
+---
+
+## 2. Physically Motivated Graph Construction
+
+`utils/build_graph.py` implements a static graph that exploits the known topology of the VELO detector. The graph is built once during data preparation (CPU), eliminating the need for dynamic construction during training.
+
+### 2.1. Graph Topology
+
+**Intra-module edges (local clustering)**:
+- `radius_graph` in the xy sensor plane with `r < 5.0 mm`.
+- Connects hits within the same module, allowing the network to identify shared charge deposits or secondary electrons (delta rays).
+
+**Inter-module edges (KNN to M±1)**:
+- KNN (`k=3`) from module `M_i` to `M_{i±1}` in the xy plane.
+- Tracks traverse silicon planes sequentially; connecting hits in adjacent layers preselects congruent track segments.
+
+**Skip edges (KNN to M±2)**:
+- KNN (`k=1`) from module `M_i` to `M_{i±2}`.
+- Provides robustness against sensor inefficiencies or dead regions, allowing information to "skip" a plane.
+
+**Bidirectionality**: All edges are duplicated (reversed direction) and duplicates are removed via coalescence.
+
+### 2.2. Edge Attributes (10-dimensional)
+
+`compute_edge_attr()` generates rich geometric features for each edge:
+
+| Component | Description |
+|---|---|
+| `dx, dy, dz` | Raw spatial differences (mm) |
+| `dist_3d` | 3D Euclidean distance |
+| `d_rT, d_phi, d_z_n` | Cylindrical deltas (normalised) |
+| `ux, uy, uz` | 3D unit direction vector |
 
 ---
 
-## 3. Justificación de Optimizaciones
+## 3. Model: Interaction Network (V4.1)
 
-1.  **Chunks e IterableDataset**: Los datos se cargan en streaming desde archivos segmentados. Esto permite entrenar con datasets masivos sin saturar la RAM de la CPU, manteniendo la GPU siempre alimentada de datos (prefetching).
-2.  **Balanced Sampling (1:1)**: El pipeline de entrenamiento equilibra automáticamente la señal y el fondo mediante un ciclo infinito sobre los archivos de menor frecuencia. Esto permite usar un `pos_weight=1.0` y simplifica la convergencia.
-3.  **BF16-Mixed Precision**: Los cálculos de distancias al cuadrado generan valores con gran rango dinámico. BF16 evita los overflows y NaNs que suelen ocurrir con el formato FP16 tradicional, manteniendo la eficiencia del hardware moderno.
-4.  **Expansión Progresiva**: El modelo comienza entrenando con un subconjunto de datos para estabilizar los pesos iniciales y luego expande gradualmente su horizonte de aprendizaje, acelerando la convergencia en las etapas finales.
+`codex_gnn_model.py` implements an **Interaction Network (V4.1)** optimised for assimilating geometric constraints via message passing.
+
+### 3.1. General Architecture
+
+```
+Node Features (8) → Node Encoder → 4× InteractionLayer → Multi-head Pooling → Classifier
+Edge Features (10) → Edge Encoder ────────────────────────────┘
+```
+
+### 3.2. Changes from V3 (/V2)
+
+| Decision | V2 | V3 | V4.1 (current) |
+|---|---|---|---|
+| Attention mechanism | GATv2Conv | InteractionNetwork | InteractionNetwork |
+| Module embedding | Yes | Yes | Removed (not useful for discrimination) |
+| Continuous features | 9 | 9 | **8** (`eta` dropped, r=0.77 with `codex_angle`) |
+| Dynamic graph | KNN in forward | Static (precomputed) | Static (precomputed) |
+| `num_layers` (training) | — | 5 | **4** (config: 5 in lightning_train.py) |
+| `hidden_channels` | — | 128 | **128** |
+| `edge_hidden` | — | 96 | **96** |
+
+### 3.3. InteractionLayer (Message Passing)
+
+Pure Interaction Network layer (no attention). Based on PyTorch Geometric's `MessagePassing` with `add` aggregation.
+
+**Message function** (Edge MLP):
+```
+m_{ij} = edge_mlp( [x_i ‖ x_j ‖ edge_attr_{ij}] )
+```
+Architecture: `Linear(2·node_dim + edge_dim, 64) → LayerNorm → SiLU → Linear(64, node_dim)`. Narrow bottleneck because it is applied **per edge** (~millions per batch).
+
+**Update function** (Node MLP):
+```
+x_i' = node_mlp( [x_i ‖ Σ_j m_{ij}] ) + x_i  # residual
+```
+Architecture: `Linear(2·node_dim, node_dim) → SiLU → Linear(node_dim, node_dim)`. Wider because it is applied **per node**.
+
+**Regularisation**: LayerNorm in residual + inside each MLP.
+
+### 3.4. Initial Encoders
+
+**Node Encoder**: `Linear(8, 128) → LayerNorm → SiLU`. Projects the 8 continuous features into hidden space.
+
+**Edge Encoder**: `Linear(10, 32) → LayerNorm → SiLU`. Normalises edge features (mm-scale → stable) and compresses to 32D. Prevents fp16/bf16 overflow.
+
+### 3.5. Global Pooling (Jumping Knowledge)
+
+Features are extracted from **two levels** of the InteractionLayer stack:
+- **Middle layer** (`jk_mid_layer = num_layers // 2 - 1`): local track fragments.
+- **Final layer** (`num_layers - 1`): global graph structure.
+
+Two pooling strategies are applied at each level:
+- **AttentionalAggregation**: Learns importance weights for each node via a `gate_nn` (MLP: `Linear(128, 64) → SiLU → Linear(64, 1)`).
+- **GlobalMaxPool**: Captures the most extreme or energetic hits.
+
+### 3.6. Classifier
+
+3-layer MLP with Dropout:
+
+```
+pool_dim = (128 × 2) × 2 + 3 = 515  # (attn+max) × 2 levels + 3 global features
+Linear(515, 256) → SiLU → Dropout(0.3) → Linear(256, 128) → SiLU → Dropout(0.3) → Linear(128, 1)
+```
 
 ---
-*Este diseño integra los principios de la física de partículas (linealidad y geometría del VELO) con las arquitecturas de grafos más potentes, resultando en un sistema de veto robusto, escalable y físicamente motivado.*
+
+## 4. Training Pipeline (PyTorch Lightning)
+
+### 4.1. LightningModule (`lightning_model.py`)
+
+**Optimiser**: AdamW with `weight_decay=1e-4` (L2 regularisation).
+
+**LR Scheduler**: `WarmupReduceLROnPlateau` — linear warmup for 2 epochs (from `1e-6` to base LR) followed by `ReduceLROnPlateau(factor=0.5, patience=3)` monitoring `val_loss`.
+
+**Loss**: `BCEWithLogitsLoss` with `pos_weight=1.0` (1:1 balance via paired sampling).
+
+**Metrics**: BinaryAccuracy, BinaryAUROC, BinaryAveragePrecision (note: `batch.y` is cast to `long()` since torchmetrics requires integer labels for PR curve computation).
+
+**Mixed precision**: BF16 to avoid overflows in squared spatial differences.
+
+### 4.2. Training Configuration (`lightning_train.py`)
+
+| Parameter | Value | Justification |
+|---|---|---|
+| `BATCH_SIZE` | 32 | Avoids CUDA OOM (~16k edges/graph × 32 = 2.1M edges/batch) |
+| `ACCUM_STEPS` | 4 | Effective batch size of 128 |
+| `NUM_WORKERS` | 1 | Prevents OST contention on Lustre |
+| `prefetch_factor` | 8 | GPU buffer of ~512 graphs (~5s) |
+| `MP_CONTEXT` | spawn | Avoids deadlocks with mmap on Lustre |
+| `USE_MULTI_GPU` | False | DDP causes NCCL timeouts with slow I/O |
+| `gradient_clip_val` | 1.0 | Stabilises gradients in deep networks |
+
+### 4.3. Data Loading and Anti-Bottleneck I/O Strategy
+
+**Repacked format**: Chunks (~6 GB with ~5,700 graphs) are stored as contiguous tensors + slices. `_load_repacked_chunk()` performs a **sequential read** (`mmap=False`) to avoid the thousands of page faults that occurred with `mmap=True` on Lustre OSTs at 100% capacity.
+
+**Concurrent signal || background loading**: Two threads (`threading.Thread`) load signal (OST:1) and background (OST:0) simultaneously, exploiting their placement on different OSTs with `stripe_count=1`. This reduces per-pair load time from ~219s to ~95-110s.
+
+**Triple-queue double-buffer**: Inside the DataLoader worker, a `daemon=True` thread pre-loads subsequent chunks into a `queue.Queue(maxsize=3)` while the main thread yields graphs. The 3-slot queue provides ~196s of GPU time cushion, absorbing Lustre latency spikes.
+
+**Progressive expansion**: Training starts with 20 pairs and expands to 70 then all available according to the schedule `[(2, 20), (7, 70), (999999, None)]`. This stabilises initial weights before exposing the model to full data variability.
+
+### 4.4. Early Stopping and Checkpointing
+
+- `EarlyStopping(patience=10, monitor="val_loss")` stops training if no improvement.
+- `ModelCheckpoint(save_top_k=1, monitor="val_loss")` saves the best model.
+- `LearningRateMonitor` logs the learning rate to WandB.
+- `WandbLogger` with `log_model="all"` for full traceability.
+
+---
+
+## 5. Performance Considerations
+
+| Issue | Problem | Solution |
+|---|---|---|
+| Lustre OSTs at 100% | Catastrophic page faults with mmap | Sequential read (`mmap=False`) |
+| OST contention | 2 workers saturated OSTs | Reduce to `NUM_WORKERS=1` |
+| Load latency > compute | GPU underutilisation | Double-buffer + concurrent sig\|\|bkg loading |
+| torchmetrics failure | `BinaryAveragePrecision` rejects float | Cast `batch.y.long()` |
+| DDP with slow I/O | NCCL timeouts from desynchronisation | Single GPU (`USE_MULTI_GPU=False`) |
+
+---
+
+*This design integrates particle physics principles (track linearity in VELO) with graph architectures (Interaction Networks) and a data pipeline optimised for parallel filesystems (Lustre), resulting in a robust, scalable, and physically motivated veto system for CODEX-b.*

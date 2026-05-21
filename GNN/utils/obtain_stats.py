@@ -59,12 +59,6 @@ def compute_fast_statistics():
     r_T = np.sqrt(events.x**2 + events.y**2)
     phi = np.arctan2(events.y, events.x)
     
-    # Robust eta calculation using min/max instead of clip for ufunc compatibility
-    theta = np.arctan2(r_T, events.z)
-    theta_half = theta / 2.0
-    theta_clipped = np.minimum(np.maximum(theta_half, 1e-7), np.pi/2 - 1e-7)
-    eta = -np.log(np.tan(theta_clipped))
-    
     # Vectorized Codex Angle calculation (dot product)
     norm_hit = np.sqrt(events.x**2 + events.y**2 + events.z**2)
     norm_codex = np.sqrt(CODEX_X**2 + CODEX_Y**2 + CODEX_Z**2)
@@ -78,13 +72,12 @@ def compute_fast_statistics():
     # Add engineered features to the virtual array
     events["r_T"] = r_T
     events["phi"] = phi
-    events["eta"] = eta
     events["codex_angle"] = codex_angle 
 
     events["module_side"] = events["module"] % 2
 
     # --- 3. Column Definitions ---
-    hit_cols = ['x', 'y', 'z', 'r_T', 'phi', 'eta', 'n_pix', 'codex_angle', 'module_side']
+    hit_cols = ['x', 'y', 'z', 'r_T', 'phi', 'n_pix', 'codex_angle', 'module_side']
     event_cols = ['nVtx_per_event', 'nClu_per_event', 'nTrk_per_event']
     all_cols = hit_cols + event_cols
     

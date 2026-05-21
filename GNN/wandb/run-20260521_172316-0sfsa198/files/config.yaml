@@ -1,0 +1,81 @@
+_wandb:
+    value:
+        cli_version: 0.26.1
+        e:
+            id1suh08bukvo23xnf2s8qkdwv7uzdgh:
+                codePath: GNN/lightning_train.py
+                codePathLocal: lightning_train.py
+                cpu_count: 32
+                cpu_count_logical: 32
+                cudaVersion: "13.2"
+                disk:
+                    /:
+                        total: "52521938944"
+                        used: "20946288640"
+                email: alejandro.rg.2014@gmail.com
+                executable: /home3/alejandro.rodriguez/TFM/GNN/torch_env/torch_env/bin/python
+                git:
+                    commit: 754f877f2788378b8559bfe1686222403e32535c
+                    remote: git@github.com:AlejandroRG03/TFM.git
+                gpu: NVIDIA A30
+                gpu_count: 2
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 3584
+                      memoryTotal: "25769803776"
+                      name: NVIDIA A30
+                      uuid: GPU-11f1b73d-fd4d-bada-47ec-05c7fdb2e7a6
+                    - architecture: Ampere
+                      cudaCores: 3584
+                      memoryTotal: "25769803776"
+                      name: NVIDIA A30
+                      uuid: GPU-f09e4776-aefa-8338-b9ea-b3982be87dac
+                host: nodo056167.inv.usc.es
+                memory:
+                    total: "269408821248"
+                os: Linux-5.14.0-611.49.2.el9_7.x86_64-x86_64-with-glibc2.34
+                program: /home3/alejandro.rodriguez/TFM/GNN/lightning_train.py
+                python: CPython 3.12.12
+                root: .
+                startedAt: "2026-05-21T15:23:16.117674Z"
+                writerId: id1suh08bukvo23xnf2s8qkdwv7uzdgh
+        m:
+            - "1": trainer/global_step
+              "6":
+                - 3
+              "7": []
+            - "2": '*'
+              "5": 1
+              "6":
+                - 1
+              "7": []
+        python_version: 3.12.12
+        t:
+            "1":
+                - 1
+                - 9
+                - 77
+                - 103
+            "2":
+                - 1
+                - 9
+                - 77
+                - 103
+            "3":
+                - 7
+                - 13
+                - 66
+            "4": 3.12.12
+            "5": 0.26.1
+            "12": 0.26.1
+            "13": linux-x86_64
+learning_rate:
+    value: 0.0005
+model_kwargs:
+    value:
+        edge_hidden: 96
+        hidden_channels: 128
+        n_cont_features: 8
+        num_layers: 5
+pos_weight_val:
+    value: 1
