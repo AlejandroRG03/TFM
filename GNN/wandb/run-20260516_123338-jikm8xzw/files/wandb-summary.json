@@ -1,1 +1,0 @@
-{"lr-AdamW":0.0005,"trainer/global_step":9310,"train_acc":0.6670674085617065,"_runtime":26450,"_step":30,"_wandb":{"runtime":26450},"_timestamp":1.778952320565162e+09,"val_auc":0.7272202968597412,"val_acc":0.621666669845581,"epoch":9,"train_auc":0.7264624834060669,"val_loss":0.6621630191802979,"train_loss":0.5962744951248169}

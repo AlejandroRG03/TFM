@@ -1,35 +1,9 @@
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
+from torch.optim.lr_scheduler import LinearLR, CosineAnnealingWarmRestarts, SequentialLR
 from torchmetrics.classification import BinaryAccuracy, BinaryAUROC, BinaryAveragePrecision
 from codex_gnn_model import CODEXVetoGNN
-
-class WarmupReduceLROnPlateau(torch.optim.lr_scheduler.ReduceLROnPlateau):
-    """
-    ReduceLROnPlateau preceded by a linear warmup phase.
-    During the first `warmup_epochs`, the LR increases linearly
-    from `warmup_start_lr` to the optimizer's base LR.
-    After warmup, it delegates to the standard ReduceLROnPlateau logic.
-    """
-    def __init__(self, optimizer, warmup_epochs=2, warmup_start_lr=1e-6,
-                 factor=0.3, patience=4, min_lr=1e-6):
-        super().__init__(optimizer, mode='min', factor=factor,
-                         patience=patience, min_lr=min_lr)
-        self.warmup_epochs = warmup_epochs
-        self.warmup_start_lr = warmup_start_lr
-        self.base_lr = optimizer.param_groups[0]['lr']
-        self._warmup_step = 0
-
-    # Added epoch=None to match official PyTorch signature
-    def step(self, metrics=None, epoch=None): 
-        self._warmup_step += 1
-        if self._warmup_step <= self.warmup_epochs:
-            frac = self._warmup_step / max(1, self.warmup_epochs)
-            lr = self.warmup_start_lr + frac * (self.base_lr - self.warmup_start_lr)
-            for pg in self.optimizer.param_groups:
-                pg['lr'] = lr
-        else:
-            super().step(metrics, epoch)
 
 class CODEXLightning(pl.LightningModule):
     def __init__(self, pos_weight_val, learning_rate=1e-3, model_kwargs=None):
@@ -98,26 +72,30 @@ class CODEXLightning(pl.LightningModule):
         self.log('val_prc', self.val_prc, prog_bar=True, batch_size=batch.num_graphs, sync_dist=True)
 
     def configure_optimizers(self):
-        # AdamW Optimizer: Includes weight_decay to force small weights and regularize the GNN
         optimizer = torch.optim.AdamW(
             self.parameters(), 
             lr=self.learning_rate, 
             weight_decay=1e-4 
         )
         
-        # Custom Scheduler: Prevents the network from jumping uncontrollably in the first epochs
-        scheduler = WarmupReduceLROnPlateau(
-            optimizer, 
-            warmup_epochs=2,
-            warmup_start_lr=1e-6,
-            factor=0.5, 
-            patience=3
+        warmup = LinearLR(
+            optimizer,
+            start_factor=1e-6 / self.learning_rate,
+            end_factor=1.0,
+            total_iters=2
         )
         
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "monitor": "val_loss",
-            },
-        }
+        cosine = CosineAnnealingWarmRestarts(
+            optimizer,
+            T_0=15,
+            T_mult=2,
+            eta_min=1e-6
+        )
+        
+        scheduler = SequentialLR(
+            optimizer,
+            schedulers=[warmup, cosine],
+            milestones=[2]
+        )
+        
+        return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler}}

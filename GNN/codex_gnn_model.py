@@ -39,7 +39,7 @@ class InteractionLayer(MessagePassing):
     Update function:
         x_i' = node_mlp( [x_i ‖ Σ_j m_{ij}] )  +  x_i   (residual)
     """
-    def __init__(self, node_dim, edge_dim, edge_hidden=96):
+    def __init__(self, node_dim, edge_dim, edge_hidden=128):
         super().__init__(aggr='add')
 
         # Edge MLP: computes message from source node, target node, and edge features
@@ -94,10 +94,9 @@ class CODEXVetoGNN(nn.Module):
     """
     def __init__(self, n_cont_features=8,
                  hidden_channels=96, edge_dim=10, global_dim=3, num_layers=4,
-                 edge_hidden=64):
+                 edge_hidden=128):
         super().__init__()
         self.num_layers = num_layers
-        self.jk_mid_layer = num_layers // 2 - 1 # which layer to pool from for Jumping Knowledge (0-based index)
 
         # 1. Initial encoder: projects continuous features → hidden
         self.node_encoder = Sequential(
@@ -108,7 +107,7 @@ class CODEXVetoGNN(nn.Module):
 
         # 2. Edge encoder: normalises raw edge features (mm-scale → stable scale)
         # Prevents fp16 overflow from raw spatial differences
-        edge_enc_dim = 32  # compact learned edge representation
+        edge_enc_dim = 64  # compact learned edge representation
         self.edge_encoder = Sequential(
             Linear(edge_dim, edge_enc_dim),
             LayerNorm(edge_enc_dim),
@@ -126,30 +125,25 @@ class CODEXVetoGNN(nn.Module):
                 )
             )
 
-        # 4. Global Attention Pooling
-        # V4.1: we use a separate attention pool for mid layer and final layer outputs
-        # to capture multi-scale features
-        self.attn_pools = ModuleList()
-        for _ in range(2): # 2, independen of num_layers
-            gate_nn = Sequential(
-                Linear(hidden_channels, hidden_channels // 2),
-                SiLU(),
-                Linear(hidden_channels // 2, 1)
-            )
-            self.attn_pools.append(aggr.AttentionalAggregation(gate_nn))
+        # 4. Global Attention Pooling (shared across all layers)
+        gate_nn = Sequential(
+            Linear(hidden_channels, hidden_channels // 2),
+            SiLU(),
+            Linear(hidden_channels // 2, 1)
+        )
+        self.attn_pool = aggr.AttentionalAggregation(gate_nn)
 
         # 5. Final Classifier (MLP)
-        # Jumping Knowledge: we concatenate pooled features from ALL layers
-        # (pool_att + pool_max) * num_layers + global_attr
-        pool_dim = (hidden_channels * 2) * 2 + global_dim
+        # Jumping Knowledge: concatenate (attn + max) from EVERY layer
+        pool_dim = (hidden_channels * 2) * num_layers + global_dim
         self.classifier = Sequential(
-            Linear(pool_dim, hidden_channels * 2),
+            Linear(pool_dim, hidden_channels * 4),
             SiLU(),
-            Dropout(0.3),
-            Linear(hidden_channels * 2, hidden_channels),
+            Dropout(0.1),
+            Linear(hidden_channels * 4, hidden_channels * 2),
             SiLU(),
-            Dropout(0.3),
-            Linear(hidden_channels, 1)
+            Dropout(0.1),
+            Linear(hidden_channels * 2, 1)
         )
 
     def forward(self, data):
@@ -163,25 +157,23 @@ class CODEXVetoGNN(nn.Module):
         x = self.node_encoder(x_cont)
         edge_attr_enc = self.edge_encoder(edge_attr)
 
-        # ── Global Pooling (Jumping Knowledge) ────────────────────────
+        # ── Self-loops: each node connects to itself ─────────────────
+        N = x.size(0)
+        device = edge_index.device
+        self_loops = torch.arange(N, device=device).unsqueeze(0).expand(2, -1)
+        edge_index = torch.cat([edge_index, self_loops], dim=1)
+        zero_attr = torch.zeros(N, edge_attr_enc.size(-1), device=device, dtype=edge_attr_enc.dtype)
+        edge_attr_enc = torch.cat([edge_attr_enc, zero_attr], dim=0)
+
+        # ── Global Pooling (Jumping Knowledge: all layers) ────────────
         
         pooled_features = []
         
         for idx, layer in enumerate(self.layers):
             x = layer(x, edge_index, edge_attr_enc)
-            
-            # JK extraction: Middle layer (local pseudo-tracks)
-            if idx == self.jk_mid_layer:
-                pooled_features.append(self.attn_pools[0](x, batch))
-                pooled_features.append(global_max_pool(x, batch))
-            
-            # JK extraction: Final layer (global structure)
-            elif idx == self.num_layers - 1:
-                pooled_features.append(self.attn_pools[1](x, batch))
-                pooled_features.append(global_max_pool(x, batch))
+            pooled_features.append(self.attn_pool(x, batch))
+            pooled_features.append(global_max_pool(x, batch))
 
-
-        
         # Combine all levels + global attributes (nVtx, nClu, etc.)
         out = torch.cat(pooled_features + [global_attr], dim=-1)
         return self.classifier(out)

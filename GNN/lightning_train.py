@@ -13,6 +13,8 @@ from typing import List, Tuple, Optional
 import torch
 import numpy as np
 
+# Pinned memory limit (informational only — not a CUDA allocator option).
+PINNED_MEMORY_LIMIT = 50 * 10**9  # 50 GB
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 torch.set_float32_matmul_precision('high')
@@ -35,32 +37,32 @@ from datetime import timedelta
 # ==============================================================================
 
 DATA_DIR = "/lustre/LHCb/alejandro.rodriguez/torch_data"
-BKG_TYPE = "MUON"
+BKG_TYPE = "KL0"
 SIGNAL_DEC_IDS = ["40114060"]
 BACKGROUND_DEC_IDS = ["30011001" if BKG_TYPE == "MUON" else "38000800"]
 
 OUTPUT_NAME   = f"{BKG_TYPE}_CODEX_GNN"
 
-BATCH_SIZE    = 32     # Avoid CUDA OOM (~16k edges/graph × 128 = 2.1M edges/batch)
-ACCUM_STEPS   = 4      # Accumulate 4 steps → effective batch size of 128
+BATCH_SIZE    = 128    # H100: 100GB VRAM permite batches grandes (265 MB/batch en BF16)
+ACCUM_STEPS   = 1      # Sin acumulación: effective batch = 128
 EPOCHS        = 100
 LEARNING_RATE = 5e-4
 
 TRAIN_SPLIT   = 0.8
 PATIENCE      = 10
-NUM_WORKERS   = 1       # 1 worker evita contención en OSTs y swap (136 GB RAM sobran)
-VAL_WORKERS   = 1
+NUM_WORKERS   = 6       # H100: 64 cores, conservador para evitar OST contention
+VAL_WORKERS   = 4
 MP_CONTEXT    = 'spawn' # CRITICAL: 'fork' deadlocks with mmap on Lustre
 MAX_VAL_PAIRS = 5       # Limit validation pairs
 USE_MULTI_GPU = False   # DDP causes NCCL timeouts with slow Lustre I/O (single GPU)
 
-# Progressive data expansion schedule:
-#   (max_epoch_exclusive, num_train_pairs)
-EXPANSION_SCHEDULE = [
-    (2,  20),
-    (7,  70),
-    (999999, None),  # None means "all"
-]
+# Fixed number of training chunk pairs (None = all available).
+MAX_TRAIN_PAIRS = 45  # ajustado a 80% RAM: ~8 pares/worker sin misses
+
+# Per-worker chunk cache limit: 80% of available RAM ÷ NUM_WORKERS.
+# Auto-scales: more workers → less cache per worker, preventing OOM.
+_AVAILABLE_RAM = psutil.virtual_memory().available
+_MAX_CACHE_BYTES: int = int((_AVAILABLE_RAM * 0.80) / NUM_WORKERS)
 
 # ==============================================================================
 # HELPERS
@@ -85,6 +87,26 @@ def get_paired_files(sig_list: List[str], bkg_list: List[str]) -> List[Tuple[str
 # ==============================================================================
 # CHUNK LOADING (supports both legacy & repacked formats)
 # ==============================================================================
+
+# Per-process LRU cache for loaded chunks.
+# With persistent_workers=True, workers keep this cache across epochs,
+# avoiding repeated Lustre I/O for chunks that are reused.
+# _MAX_CACHE_BYTES is computed in config above: 70% of RAM / NUM_WORKERS.
+_CHUNK_CACHE: dict = {}
+_CACHE_BYTES: int = 0
+
+
+def _try_cache(filepath: str, data: list) -> None:
+    """Insert data into cache if under the total size limit."""
+    global _CACHE_BYTES
+    try:
+        fsize = os.path.getsize(filepath)
+        if fsize > 0 and _CACHE_BYTES + fsize < _MAX_CACHE_BYTES:
+            _CHUNK_CACHE[filepath] = data
+            _CACHE_BYTES += fsize
+    except OSError:
+        pass
+
 
 def _is_repacked(filepath: str) -> bool:
     """Check if file has been repacked via marker file."""
@@ -149,10 +171,16 @@ def _load_legacy_chunk(filepath: str) -> list:
 
 
 def load_chunk(filepath: str) -> list:
-    """Load a chunk file, auto-detecting repacked vs legacy format."""
+    """Load a chunk file, using per-process cache (100 GB limit)."""
+    cached = _CHUNK_CACHE.get(filepath)
+    if cached is not None:
+        return cached
     if _is_repacked(filepath):
-        return _load_repacked_chunk(filepath)
-    return _load_legacy_chunk(filepath)
+        data = _load_repacked_chunk(filepath)
+    else:
+        data = _load_legacy_chunk(filepath)
+    _try_cache(filepath, data)
+    return data
 
 
 # ==============================================================================
@@ -161,35 +189,19 @@ def load_chunk(filepath: str) -> list:
 
 class ChunkIterableDataset(IterableDataset):
     """
-    Streams chunk-pairs on the fly. Supports progressive data expansion
-    via expansion_schedule and set_epoch().
+    Streams chunk-pairs on the fly. Uses a fixed set of file pairs
+    (no progressive expansion).
     """
     def __init__(self, file_pairs: List[Tuple[str, str]],
-                 expansion_schedule: Optional[List] = None,
                  is_validation: bool = False):
         super().__init__()
         self.file_pairs = file_pairs
-        self.expansion_schedule = expansion_schedule
         self.is_validation = is_validation
-        self.current_epoch = 0
-
-    def set_epoch(self, epoch: int):
-        self.current_epoch = epoch
-
-    def _num_active_pairs(self) -> int:
-        if self.expansion_schedule is None:
-            return len(self.file_pairs)
-        for max_epoch, n_pairs in self.expansion_schedule:
-            if self.current_epoch < max_epoch:
-                return len(self.file_pairs) if n_pairs is None else min(n_pairs, len(self.file_pairs))
-        return len(self.file_pairs)
 
     def __iter__(self):
         import torch.distributed as dist
 
-        # Apply progressive expansion globally BEFORE splitting
-        n_active = self._num_active_pairs()
-        global_pairs = self.file_pairs[:n_active]
+        global_pairs = self.file_pairs
 
         # DDP split (if running multi-GPU)
         if dist.is_available() and dist.is_initialized():
@@ -216,9 +228,9 @@ class ChunkIterableDataset(IterableDataset):
             if worker_id == 0:
                 process = psutil.Process()
                 mem_mb = process.memory_info().rss / (1024 * 1024)
-                print(f"[Epoch {self.current_epoch}][Worker 0] "
+                print(f"[Worker 0] "
                       f"RAM: {mem_mb:.0f} MB | Pairs: {len(active_pairs)} "
-                      f"(of {n_active}/{len(self.file_pairs)} total)")
+                      f"(of {len(self.file_pairs)} total)")
 
         if not self.is_validation:
             random.shuffle(active_pairs)
@@ -233,7 +245,9 @@ class ChunkIterableDataset(IterableDataset):
             import threading
             import queue as queue_mod
 
-            load_queue = queue_mod.Queue(maxsize=3)
+            import ctypes
+            _malloc_trim = ctypes.CDLL("libc.so.6").malloc_trim
+            load_queue = queue_mod.Queue(maxsize=2)
             stop_event = threading.Event()
 
             def _loader():
@@ -319,13 +333,18 @@ class ChunkIterableDataset(IterableDataset):
                     for idx in indices:
                         yield combined[idx]
                     del combined
+                    _malloc_trim(0)
             finally:
                 stop_event.set()
 
         # ═══════════════════════════════════════════════════════════════════
-        # VALIDATION: bucle síncrono original (pocos pares, rápida)
+        # VALIDATION: pre-carga todos los pares, GPU sin pausas
         # ═══════════════════════════════════════════════════════════════════
         else:
+            import ctypes
+            _malloc_trim = ctypes.CDLL("libc.so.6").malloc_trim
+            all_graphs = []
+            load_times = []
             for sig_file, bkg_file in active_pairs:
                 try:
                     if os.path.getsize(sig_file) < 1e8 or os.path.getsize(bkg_file) < 1e8:
@@ -338,6 +357,7 @@ class ChunkIterableDataset(IterableDataset):
                     sig_data = load_chunk(sig_file)
                     bkg_data = load_chunk(bkg_file)
                     dt = time.monotonic() - t0
+                    load_times.append(dt)
                     if worker_info and worker_info.id == 0:
                         print(f"[W0] Loaded pair in {dt:.1f}s "
                               f"({len(sig_data)}+{len(bkg_data)} graphs)")
@@ -359,29 +379,21 @@ class ChunkIterableDataset(IterableDataset):
                         data.edge_index = data.edge_index.long()
                         data.edge_attr = compute_edge_attr(data.pos, data.x_cont, data.edge_index)
 
-                indices = list(range(len(combined)))
-                random.shuffle(indices)
-                for idx in indices:
-                    yield combined[idx]
-
+                all_graphs.extend(combined)
                 del combined
+                _malloc_trim(0)
 
+            if worker_info and worker_info.id == 0 and load_times:
+                avg = sum(load_times) / len(load_times)
+                print(f"[W0] Validation: loaded {len(all_graphs)} graphs "
+                      f"from {len(load_times)} pairs ({avg:.1f}s avg load)")
 
-# ==============================================================================
-# CALLBACK: progressive expansion
-# ==============================================================================
-
-class ProgressiveExpansionCallback(pl.Callback):
-    """Updates train_dataset.current_epoch at the START of each epoch."""
-    def __init__(self, train_dataset: ChunkIterableDataset):
-        self.train_dataset = train_dataset
-
-    def on_train_epoch_start(self, trainer, pl_module):
-        self.train_dataset.set_epoch(trainer.current_epoch)
-        n_active = self.train_dataset._num_active_pairs()
-        total = len(self.train_dataset.file_pairs)
-        print(f"\n[ProgressiveExpansion] Epoch {trainer.current_epoch}: "
-              f"using {n_active}/{total} chunk pairs")
+            indices = list(range(len(all_graphs)))
+            random.shuffle(indices)
+            for idx in indices:
+                yield all_graphs[idx]
+            del all_graphs, indices
+            _malloc_trim(0)
 
 
 # ==============================================================================
@@ -399,7 +411,15 @@ def train():
 
     print(f"--> Found {len(sig_files)} signal chunks, {len(bkg_files)} background chunks.")
 
-    # 2. Split by FILES (not events) to prevent data leakage
+    # 2. Hold out last 5 chunks of each species as test set (model never sees these)
+    N_TEST = 5
+    sig_test = sig_files[-N_TEST:]
+    sig_files = sig_files[:-N_TEST]
+    bkg_test = bkg_files[-N_TEST:]
+    bkg_files = bkg_files[:-N_TEST]
+    print(f"--> Test set: {len(sig_test)} sig + {len(bkg_test)} bkg chunks (reserved, never trained/validated)")
+
+    # 3. Split remaining by FILES (not events) to prevent data leakage
     rng = random.Random(42)
     rng.shuffle(sig_files)
     rng.shuffle(bkg_files)
@@ -440,31 +460,37 @@ def train():
     pos_weight_val = 1.0
     print(f"--> Using pos_weight = {pos_weight_val}")
 
+    ram = psutil.virtual_memory()
+    print(f"--> RAM: {ram.available / 1e9:.0f} GB available, "
+          f"cache limit: {_MAX_CACHE_BYTES / 1e9:.0f} GB/worker, "
+          f"pinned limit: {PINNED_MEMORY_LIMIT / 1e9:.0f} GB")
+
     # 3. Datasets & DataLoaders
+    n_train = len(train_pairs)
+    if MAX_TRAIN_PAIRS is not None:
+        train_pairs = train_pairs[:MAX_TRAIN_PAIRS]
+        print(f"   Using {len(train_pairs)}/{n_train} train pairs (limited by MAX_TRAIN_PAIRS={MAX_TRAIN_PAIRS})")
+
     train_dataset = ChunkIterableDataset(
         train_pairs,
-        expansion_schedule=EXPANSION_SCHEDULE,
         is_validation=False,
     )
     val_dataset = ChunkIterableDataset(
         val_pairs,
-        expansion_schedule=None,
         is_validation=True,
     )
 
     # Use 'spawn' context to avoid fork+mmap deadlocks on Lustre.
-    # With 'spawn', each worker starts as a fresh Python process (no
-    # inherited mmap state), then imports modules and pickles the dataset.
-    # persistent_workers=True is essential: spawn startup costs ~10s per
-    # worker, but only happens once per training run.
+    # persistent_workers=True so workers stay alive between epochs and
+    # keep their chunk cache (100 GB per worker).
     spawn_ctx = mp.get_context(MP_CONTEXT)
 
     train_loader = DataLoader(
         train_dataset, batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
-        persistent_workers=(NUM_WORKERS > 0),
+        persistent_workers=True,
         pin_memory=True,
-        prefetch_factor=8 if NUM_WORKERS > 0 else None,
+        prefetch_factor=32 if NUM_WORKERS > 0 else None,
         multiprocessing_context=spawn_ctx if NUM_WORKERS > 0 else None,
     )
     val_loader = DataLoader(
@@ -498,7 +524,7 @@ def train():
             "n_cont_features": detected_n_feats,
             "hidden_channels": 128,
             "num_layers": 5,
-            "edge_hidden": 96,
+            "edge_hidden": 128,
         },
     )
 
@@ -518,7 +544,6 @@ def train():
     )
 
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
-    expansion_cb = ProgressiveExpansionCallback(train_dataset)
 
     wandb_logger = WandbLogger(
         project="CODEX-GNN",
@@ -536,7 +561,7 @@ def train():
         gradient_clip_val=1.0,
         accumulate_grad_batches=ACCUM_STEPS,
         num_sanity_val_steps=0,
-        callbacks=[early_stop, checkpoint, lr_monitor, expansion_cb],
+        callbacks=[early_stop, checkpoint, lr_monitor],
         logger=wandb_logger,
     )
 
