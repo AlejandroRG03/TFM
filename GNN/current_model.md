@@ -1,6 +1,6 @@
-# Technical Report: Architecture, Physical Motivation and Design of the CODEX-b GNN System
+# Technical Report: Architecture, Physical Motivation and Design of the CODEX-b GNN Veto
 
-This document provides a rigorous scientific and technical exposition of the complete veto system for CODEX-b. It covers everything from data extraction from the LHCb VELO subdetector to the training pipeline, detailing each design decision and its physical justification.
+This document provides a rigorous scientific and technical exposition of the complete veto system for CODEX-b — a GNN-based binary classifier that discriminates Standard Model background (muons, $K_L^0$) from LLP signal events using LHCb VELO hit data. It covers everything from data extraction to the training pipeline, detailing each design decision and its physical justification.
 
 ---
 
@@ -11,10 +11,13 @@ This document provides a rigorous scientific and technical exposition of the com
 Raw data resides in ROOT files (`Ntuple VeloMultiTuple`) at `/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/`. The pipeline:
 
 1. **Chunked reading**: `uproot.iterate()` reads the tree in ~100 MB blocks to avoid RAM saturation.
-2. **Feature engineering**: `r_T`, `phi` (cylindrical coordinates) and `codex_angle` (projective angle toward CODEX-b) are computed via functions in `python_modules`.
-3. **Normalisation**: Continuous variables are normalised using precomputed means and standard deviations stored in `stats/global_normalization_stats.json`. This ensures numerical stability during training.
-4. **Graph construction**: Each event is processed individually via `build_velo_graph()` (see Section 2).
-5. **Repacked format storage**: Graphs are collated into a dictionary with contiguous tensors (`data.x_cont`, `data.edge_index`, etc.) + `slices` for indexing. This enables efficient mmap-based loading.
+2. **Beamspot centering**: `x` and `y` are shifted by `beamspotX` / `beamspotY` so coordinates are relative to the beamspot.
+3. **Feature engineering**: `r_T`, `phi` (cylindrical coordinates) and `codex_angle` (projective angle toward CODEX-b) are computed via functions in `python_modules`.
+4. **Normalisation**: Continuous variables are normalised using precomputed means and standard deviations stored in `stats/global_normalization_stats.json` (computed via Dask/Awkward in `obtain_stats.py`).
+5. **Graph construction**: Each event is processed individually via `build_velo_graph()` (see Section 2).
+6. **Repacked format storage**: Graphs are collated into a dictionary with contiguous tensors (`data.x_cont`, `data.edge_index`, etc.) + `slices` for indexing. This enables efficient loading. A `.repacked` marker file is written alongside each chunk.
+
+**Execution**: `prepare_torch_files.py` supports `--label {MUON, KL0, SIGNAL, ALL}` and runs multiprocessing with a `ProcessPoolExecutor` (fork context, 24 workers). Events with < 3 hits are skipped. Events that produce 0 graph edges are also skipped.
 
 **Dataset variables:**
 
@@ -41,11 +44,11 @@ Raw data resides in ROOT files (`Ntuple VeloMultiTuple`) at `/lustre/LHCb/alejan
 
 **Inter-module edges (KNN to M±1)**:
 - KNN (`k=3`) from module `M_i` to `M_{i±1}` in the xy plane.
-- Tracks traverse silicon planes sequentially; connecting hits in adjacent layers preselects congruent track segments.
+- Tracks traverse silicon planes sequentially; connecting hits in adjacent layers preselects congruent track segments. Distance threshold of 15 mm in xy.
 
 **Skip edges (KNN to M±2)**:
 - KNN (`k=1`) from module `M_i` to `M_{i±2}`.
-- Provides robustness against sensor inefficiencies or dead regions, allowing information to "skip" a plane.
+- Provides robustness against sensor inefficiencies or dead regions, allowing information to "skip" a plane. Distance threshold of 18 mm in xy.
 
 **Bidirectionality**: All edges are duplicated (reversed direction) and duplicates are removed via coalescence.
 
@@ -62,28 +65,27 @@ Raw data resides in ROOT files (`Ntuple VeloMultiTuple`) at `/lustre/LHCb/alejan
 
 ---
 
-## 3. Model: Interaction Network (V4.1)
+## 3. Model: Interaction Network
 
-`codex_gnn_model.py` implements an **Interaction Network (V4.1)** optimised for assimilating geometric constraints via message passing.
+`codex_gnn_model.py` implements an **Interaction Network** optimised for assimilating geometric constraints via message passing.
 
 ### 3.1. General Architecture
 
 ```
-Node Features (8) → Node Encoder → 4× InteractionLayer → Multi-head Pooling → Classifier
-Edge Features (10) → Edge Encoder ────────────────────────────┘
+Node Features (8) → Node Encoder → 4–5× InteractionLayer → Multi-head Pooling (ALL layers) → Classifier
+Edge Features (10) → Edge Encoder ────────────────────────────────────────┘
 ```
 
-### 3.2. Changes from V3 (/V2)
+### 3.2. Hyperparameters
 
-| Decision | V2 | V3 | V4.1 (current) |
-|---|---|---|---|
-| Attention mechanism | GATv2Conv | InteractionNetwork | InteractionNetwork |
-| Module embedding | Yes | Yes | Removed (not useful for discrimination) |
-| Continuous features | 9 | 9 | **8** (`eta` dropped, r=0.77 with `codex_angle`) |
-| Dynamic graph | KNN in forward | Static (precomputed) | Static (precomputed) |
-| `num_layers` (training) | — | 5 | **4** (config: 5 in lightning_train.py) |
-| `hidden_channels` | — | 128 | **128** |
-| `edge_hidden` | — | 96 | **96** |
+| Parameter | Model Default | Training Override |
+|---|---|---|
+| `n_cont_features` | 8 | auto-detected from data |
+| `hidden_channels` | 96 | **128** |
+| `num_layers` | 4 | **5** |
+| `edge_hidden` | 128 | 128 |
+| `edge_enc_dim` | 64 | 64 |
+| `learning_rate` | — | **5e-4** |
 
 ### 3.3. InteractionLayer (Message Passing)
 
@@ -93,40 +95,51 @@ Pure Interaction Network layer (no attention). Based on PyTorch Geometric's `Mes
 ```
 m_{ij} = edge_mlp( [x_i ‖ x_j ‖ edge_attr_{ij}] )
 ```
-Architecture: `Linear(2·node_dim + edge_dim, 64) → LayerNorm → SiLU → Linear(64, node_dim)`. Narrow bottleneck because it is applied **per edge** (~millions per batch).
+Architecture: `Linear(2·node_dim + edge_dim, edge_hidden) → LayerNorm → SiLU → Linear(edge_hidden, node_dim)`. The default `edge_hidden=128` applies to millions of edges per batch.
 
 **Update function** (Node MLP):
 ```
 x_i' = node_mlp( [x_i ‖ Σ_j m_{ij}] ) + x_i  # residual
 ```
-Architecture: `Linear(2·node_dim, node_dim) → SiLU → Linear(node_dim, node_dim)`. Wider because it is applied **per node**.
+Architecture: `Linear(2·node_dim, node_dim) → SiLU → Linear(node_dim, node_dim)`. Wider because it is applied per node.
 
 **Regularisation**: LayerNorm in residual + inside each MLP.
 
 ### 3.4. Initial Encoders
 
-**Node Encoder**: `Linear(8, 128) → LayerNorm → SiLU`. Projects the 8 continuous features into hidden space.
+**Node Encoder**: `Linear(8, hidden_channels) → LayerNorm → SiLU`. Projects the 8 continuous features into hidden space.
 
-**Edge Encoder**: `Linear(10, 32) → LayerNorm → SiLU`. Normalises edge features (mm-scale → stable) and compresses to 32D. Prevents fp16/bf16 overflow.
+**Edge Encoder**: `Linear(10, 64) → LayerNorm → SiLU`. Normalises edge features (mm-scale → stable) and projects to 64D. Prevents fp16/bf16 overflow.
 
-### 3.5. Global Pooling (Jumping Knowledge)
+### 3.5. Self-Loops
 
-Features are extracted from **two levels** of the InteractionLayer stack:
-- **Middle layer** (`jk_mid_layer = num_layers // 2 - 1`): local track fragments.
-- **Final layer** (`num_layers - 1`): global graph structure.
+During the forward pass, self-loops are added to the edge index (each node connects to itself with a zero edge attribute vector). This allows each node to retain its own state through message passing.
 
-Two pooling strategies are applied at each level:
-- **AttentionalAggregation**: Learns importance weights for each node via a `gate_nn` (MLP: `Linear(128, 64) → SiLU → Linear(64, 1)`).
+### 3.6. Global Pooling (Jumping Knowledge)
+
+Features are extracted from **every** InteractionLayer (all 4 or 5 layers), not just selected intermediate levels. This provides the classifier with a multi-resolution view of the graph representation.
+
+Two pooling strategies are applied at each layer:
+- **AttentionalAggregation**: Learns importance weights for each node via a `gate_nn` (MLP: `Linear(hidden_channels, hidden_channels//2) → SiLU → Linear(hidden_channels//2, 1)`).
 - **GlobalMaxPool**: Captures the most extreme or energetic hits.
 
-### 3.6. Classifier
+### 3.7. Classifier
 
-3-layer MLP with Dropout:
+Multi-layer MLP with Dropout:
 
 ```
-pool_dim = (128 × 2) × 2 + 3 = 515  # (attn+max) × 2 levels + 3 global features
-Linear(515, 256) → SiLU → Dropout(0.3) → Linear(256, 128) → SiLU → Dropout(0.3) → Linear(128, 1)
+pool_dim = (hidden_channels × 2) × num_layers + 3
+         = (128 × 2) × 5 + 3 = 1283   (training config)
+         =  (96 × 2) × 4 + 3 = 771    (model default)
+
+Linear(pool_dim, hidden_channels×4) → SiLU → Dropout(0.1)
+→ Linear(hidden_channels×4, hidden_channels×2) → SiLU → Dropout(0.1)
+→ Linear(hidden_channels×2, 1)
 ```
+
+### 3.8. Parameter Count
+
+With training config (`hidden_channels=128, num_layers=5, edge_hidden=128`): ~1.2M parameters.
 
 ---
 
@@ -136,9 +149,9 @@ Linear(515, 256) → SiLU → Dropout(0.3) → Linear(256, 128) → SiLU → Dro
 
 **Optimiser**: AdamW with `weight_decay=1e-4` (L2 regularisation).
 
-**LR Scheduler**: `WarmupReduceLROnPlateau` — linear warmup for 2 epochs (from `1e-6` to base LR) followed by `ReduceLROnPlateau(factor=0.5, patience=3)` monitoring `val_loss`.
+**LR Scheduler**: Linear warmup for 2 epochs (from `1e-6 / lr` to 1.0) followed by `CosineAnnealingWarmRestarts(T_0=15, T_mult=2, eta_min=1e-6)`, combined via `SequentialLR`.
 
-**Loss**: `BCEWithLogitsLoss` with `pos_weight=1.0` (1:1 balance via paired sampling).
+**Loss**: `BCEWithLogitsLoss` with `pos_weight=1.0` (1:1 balance via paired sampling). The `pos_weight` is registered as a buffer for safe device transfer.
 
 **Metrics**: BinaryAccuracy, BinaryAUROC, BinaryAveragePrecision (note: `batch.y` is cast to `long()` since torchmetrics requires integer labels for PR curve computation).
 
@@ -148,30 +161,50 @@ Linear(515, 256) → SiLU → Dropout(0.3) → Linear(256, 128) → SiLU → Dro
 
 | Parameter | Value | Justification |
 |---|---|---|
-| `BATCH_SIZE` | 32 | Avoids CUDA OOM (~16k edges/graph × 32 = 2.1M edges/batch) |
-| `ACCUM_STEPS` | 4 | Effective batch size of 128 |
-| `NUM_WORKERS` | 1 | Prevents OST contention on Lustre |
-| `prefetch_factor` | 8 | GPU buffer of ~512 graphs (~5s) |
-| `MP_CONTEXT` | spawn | Avoids deadlocks with mmap on Lustre |
-| `USE_MULTI_GPU` | False | DDP causes NCCL timeouts with slow I/O |
-| `gradient_clip_val` | 1.0 | Stabilises gradients in deep networks |
+| `BATCH_SIZE` | 128 | H100 100 GB VRAM allows large batches (~265 MB/batch in BF16) |
+| `ACCUM_STEPS` | 1 | No accumulation needed; effective batch = 128 |
+| `LEARNING_RATE` | 5e-4 | — |
+| `EPOCHS` | 100 | With early stopping |
+| `NUM_WORKERS` | 6 | H100 has 64 cores; conservative to avoid OST contention on Lustre |
+| `VAL_WORKERS` | 4 | Fewer workers for validation |
+| `prefetch_factor` | 32 (train) / 8 (val) | Aggressive prefetch to keep GPU fed |
+| `MP_CONTEXT` | spawn | CRITICAL: avoids deadlocks with mmap on Lustre |
+| `MAX_TRAIN_PAIRS` | 45 | Limits RAM usage (~80% of available / NUM_WORKERS) |
+| `MAX_VAL_PAIRS` | 5 | Limits validation to 5 chunk-pairs |
+| `gradient_clip_val` | 1.0 | Stabilises gradients |
+| `persistent_workers` | True | Workers stay alive across epochs, preserving their LRU chunk cache |
+
+**Train/Val/Test split**: The last 5 chunks of each species are held out as a test set (never seen during training). The remaining chunks are split 80/20 by files (not events) to prevent data leakage. Validation is limited to `MAX_VAL_PAIRS=5` pairs.
 
 ### 4.3. Data Loading and Anti-Bottleneck I/O Strategy
 
 **Repacked format**: Chunks (~6 GB with ~5,700 graphs) are stored as contiguous tensors + slices. `_load_repacked_chunk()` performs a **sequential read** (`mmap=False`) to avoid the thousands of page faults that occurred with `mmap=True` on Lustre OSTs at 100% capacity.
 
-**Concurrent signal || background loading**: Two threads (`threading.Thread`) load signal (OST:1) and background (OST:0) simultaneously, exploiting their placement on different OSTs with `stripe_count=1`. This reduces per-pair load time from ~219s to ~95-110s.
+**Concurrent signal || background loading**: Two `threading.Thread` instances load signal and background chunks simultaneously via `load_chunk()`. Since `torch.load` releases the GIL during I/O, the two reads proceed in parallel, exploiting placement on different OSTs.
 
-**Triple-queue double-buffer**: Inside the DataLoader worker, a `daemon=True` thread pre-loads subsequent chunks into a `queue.Queue(maxsize=3)` while the main thread yields graphs. The 3-slot queue provides ~196s of GPU time cushion, absorbing Lustre latency spikes.
+**Double-buffer with back-pressure**: Inside the training DataLoader worker, a `daemon=True` background thread pre-loads subsequent chunk pairs into a `queue.Queue(maxsize=2)` while the main thread yields shuffled graphs to the GPU. A 2-slot queue provides sufficient cushion to absorb Lustre latency spikes. Back-pressure uses `timeout=1.0` on `queue.put()` to remain responsive to shutdown signals.
 
-**Progressive expansion**: Training starts with 20 pairs and expands to 70 then all available according to the schedule `[(2, 20), (7, 70), (999999, None)]`. This stabilises initial weights before exposing the model to full data variability.
+**Per-worker LRU chunk cache**: Each worker maintains a global cache (`_CHUNK_CACHE`) that stores loaded chunks up to 80% of available RAM divided by `NUM_WORKERS`. With `persistent_workers=True`, this cache survives across epochs, dramatically reducing I/O on repeated chunks.
+
+**Memory management**: `ctypes.CDLL("libc.so.6").malloc_trim(0)` is called after each chunk to return freed memory to the OS, preventing RSS growth.
+
+**File validation**: Chunk pairs smaller than 100 MB are silently skipped.
 
 ### 4.4. Early Stopping and Checkpointing
 
 - `EarlyStopping(patience=10, monitor="val_loss")` stops training if no improvement.
-- `ModelCheckpoint(save_top_k=1, monitor="val_loss")` saves the best model.
+- `ModelCheckpoint(save_top_k=1, monitor="val_loss")` saves the best model to `models/{BKG_TYPE}/`.
 - `LearningRateMonitor` logs the learning rate to WandB.
 - `WandbLogger` with `log_model="all"` for full traceability.
+
+### 4.5. Test Evaluation (`gnn_tests.py`)
+
+After training, `gnn_tests.py` loads the best checkpoint and runs inference on the held-out test set. It computes:
+- Accuracy, ROC-AUC, Precision-Recall AUC, F1 score
+- Confusion matrix, classification report
+- Signal efficiency vs background rejection curves
+- Probability distribution plots (signal vs background)
+- All plots saved to `test_plots/`.
 
 ---
 
@@ -180,10 +213,24 @@ Linear(515, 256) → SiLU → Dropout(0.3) → Linear(256, 128) → SiLU → Dro
 | Issue | Problem | Solution |
 |---|---|---|
 | Lustre OSTs at 100% | Catastrophic page faults with mmap | Sequential read (`mmap=False`) |
-| OST contention | 2 workers saturated OSTs | Reduce to `NUM_WORKERS=1` |
+| OST contention | Many workers saturated OSTs | Conservative `NUM_WORKERS=6` with per-worker cache |
 | Load latency > compute | GPU underutilisation | Double-buffer + concurrent sig\|\|bkg loading |
+| Memory fragmentation | RSS grows across epochs | `malloc_trim(0)` after each chunk |
 | torchmetrics failure | `BinaryAveragePrecision` rejects float | Cast `batch.y.long()` |
 | DDP with slow I/O | NCCL timeouts from desynchronisation | Single GPU (`USE_MULTI_GPU=False`) |
+| Sparse edge gradients | Zero-gradient for unused edges | Self-loop connections ensure every node participates |
+
+---
+
+## 6. VETO Performance
+
+The current model has demonstrated strong potential as a **VETO** system for CODEX-b, effectively discriminating between Standard Model background events and LLP signal events. The combination of:
+- Physically motivated graph construction encoding VELO detector topology
+- Interaction Network message passing for relational reasoning
+- Jumping Knowledge pooling across all layers for multi-resolution features
+- Robust I/O pipeline optimised for Lustre parallel filesystem
+
+...results in a robust, scalable, and physically motivated veto system capable of real-time background rejection for the CODEX-b experiment.
 
 ---
 
