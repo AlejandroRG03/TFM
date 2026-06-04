@@ -37,27 +37,36 @@ from datetime import timedelta
 # ==============================================================================
 
 DATA_DIR = "/lustre/LHCb/alejandro.rodriguez/torch_data"
-BKG_TYPE = "KL0"
-SIGNAL_DEC_IDS = ["40114060"]
-BACKGROUND_DEC_IDS = ["30011001" if BKG_TYPE == "MUON" else "38000800"]
+BKG_TYPE = "SEPPARATE_BKG" # check if our net can distinguish between muon and kl0, ignoring signal
+
+DISCRIMINATE_BKG = (BKG_TYPE == "SEPPARATE_BKG")
+
+if DISCRIMINATE_BKG:
+    SIGNAL_DEC_IDS     = ["30011001"]   # muons as "signal" (y=1)
+    BACKGROUND_DEC_IDS = ["38000800"]   # KL0 as "background" (y=0)
+    SIGNAL_DATA_TYPE   = "background"   # both live in background/ on disk
+else:
+    SIGNAL_DEC_IDS     = ["40114060"]
+    BACKGROUND_DEC_IDS = ["30011001" if BKG_TYPE == "MUON" else "38000800"]
+    SIGNAL_DATA_TYPE   = "signal"
 
 OUTPUT_NAME   = f"{BKG_TYPE}_CODEX_GNN"
 
-BATCH_SIZE    = 128    # H100: 100GB VRAM permite batches grandes (265 MB/batch en BF16)
-ACCUM_STEPS   = 1      # Sin acumulación: effective batch = 128
+BATCH_SIZE    = 128    # H100: 100GB VRAM permite batches grandes
+ACCUM_STEPS   = 1      # effective batch = 128
 EPOCHS        = 100
 LEARNING_RATE = 5e-4
 
 TRAIN_SPLIT   = 0.8
 PATIENCE      = 10
-NUM_WORKERS   = 6       # H100: 64 cores, conservador para evitar OST contention
+NUM_WORKERS   = 6       # H100: 64 cores
 VAL_WORKERS   = 4
 MP_CONTEXT    = 'spawn' # CRITICAL: 'fork' deadlocks with mmap on Lustre
 MAX_VAL_PAIRS = 5       # Limit validation pairs
 USE_MULTI_GPU = False   # DDP causes NCCL timeouts with slow Lustre I/O (single GPU)
 
 # Fixed number of training chunk pairs (None = all available).
-MAX_TRAIN_PAIRS = 45  # ajustado a 80% RAM: ~8 pares/worker sin misses
+MAX_TRAIN_PAIRS = 20  # rapido: ~20 pares para esta prueba
 
 # Per-worker chunk cache limit: 80% of available RAM ÷ NUM_WORKERS.
 # Auto-scales: more workers → less cache per worker, preventing OOM.
@@ -193,10 +202,12 @@ class ChunkIterableDataset(IterableDataset):
     (no progressive expansion).
     """
     def __init__(self, file_pairs: List[Tuple[str, str]],
-                 is_validation: bool = False):
+                 is_validation: bool = False,
+                 relabel_signal: bool = False):
         super().__init__()
         self.file_pairs = file_pairs
         self.is_validation = is_validation
+        self.relabel_signal = relabel_signal
 
     def __iter__(self):
         import torch.distributed as dist
@@ -235,12 +246,6 @@ class ChunkIterableDataset(IterableDataset):
         if not self.is_validation:
             random.shuffle(active_pairs)
 
-        # ═══════════════════════════════════════════════════════════════════
-        # TRAINING: double-buffer con hilo loader en background
-        #   - Hilo loader: carga chunks secuencialmente y los mete en cola
-        #   - Hilo main: extrae de la cola y yield graphs a la GPU
-        #   - La GPU nunca espera porque el siguiente par ya está en RAM
-        # ═══════════════════════════════════════════════════════════════════
         if not self.is_validation:
             import threading
             import queue as queue_mod
@@ -264,8 +269,7 @@ class ChunkIterableDataset(IterableDataset):
 
                         try:
                             t0 = time.monotonic()
-                            # ── Carga concurrente: sig(OST:1) || bkg(OST:0) ──
-                            # torch.load libera el GIL → I/O real en paralelo
+
                             load_results = {}
                             load_errors = {}
                             def _load_one(key, path):
@@ -285,6 +289,9 @@ class ChunkIterableDataset(IterableDataset):
                                 raise RuntimeError(f"Concurrent load errors: {load_errors}")
                             sig_data = load_results['sig']
                             bkg_data = load_results['bkg']
+                            if self.relabel_signal:
+                                for d in sig_data:
+                                    d.y = torch.ones_like(d.y)
                             dt = time.monotonic() - t0
                             if worker_info and worker_info.id == 0:
                                 print(f"[W0] Loaded pair in {dt:.1f}s "
@@ -310,7 +317,6 @@ class ChunkIterableDataset(IterableDataset):
                         indices = list(range(len(combined)))
                         random.shuffle(indices)
 
-                        # Back-pressure: timeout en put para detectar stop_event
                         while True:
                             try:
                                 load_queue.put((combined, indices), timeout=1.0)
@@ -337,9 +343,7 @@ class ChunkIterableDataset(IterableDataset):
             finally:
                 stop_event.set()
 
-        # ═══════════════════════════════════════════════════════════════════
-        # VALIDATION: pre-carga todos los pares, GPU sin pausas
-        # ═══════════════════════════════════════════════════════════════════
+        # VALIDATION
         else:
             import ctypes
             _malloc_trim = ctypes.CDLL("libc.so.6").malloc_trim
@@ -356,6 +360,9 @@ class ChunkIterableDataset(IterableDataset):
                     t0 = time.monotonic()
                     sig_data = load_chunk(sig_file)
                     bkg_data = load_chunk(bkg_file)
+                    if self.relabel_signal:
+                        for d in sig_data:
+                            d.y = torch.ones_like(d.y)
                     dt = time.monotonic() - t0
                     load_times.append(dt)
                     if worker_info and worker_info.id == 0:
@@ -402,7 +409,7 @@ class ChunkIterableDataset(IterableDataset):
 
 def train():
     # 1. Discover files
-    sig_files = get_files(DATA_DIR, SIGNAL_DEC_IDS, "signal")
+    sig_files = get_files(DATA_DIR, SIGNAL_DEC_IDS, SIGNAL_DATA_TYPE)
     bkg_files = get_files(DATA_DIR, BACKGROUND_DEC_IDS, "background")
 
     if not sig_files or not bkg_files:
@@ -474,29 +481,33 @@ def train():
     train_dataset = ChunkIterableDataset(
         train_pairs,
         is_validation=False,
+        relabel_signal=DISCRIMINATE_BKG,
     )
     val_dataset = ChunkIterableDataset(
         val_pairs,
         is_validation=True,
+        relabel_signal=DISCRIMINATE_BKG,
     )
 
     # Use 'spawn' context to avoid fork+mmap deadlocks on Lustre.
-    # persistent_workers=True so workers stay alive between epochs and
-    # keep their chunk cache (100 GB per worker).
+    # persistent_workers=False to avoid deadlocks between spawn workers
+    # and the ChunkIterableDataset's internal daemon threads.
+    # Workers are re-created each epoch (LRU cache lost, but no deadlock).
     spawn_ctx = mp.get_context(MP_CONTEXT)
 
     train_loader = DataLoader(
         train_dataset, batch_size=BATCH_SIZE,
         num_workers=NUM_WORKERS,
-        persistent_workers=True,
+        persistent_workers=False,
         pin_memory=True,
         prefetch_factor=32 if NUM_WORKERS > 0 else None,
         multiprocessing_context=spawn_ctx if NUM_WORKERS > 0 else None,
     )
+
     val_loader = DataLoader(
         val_dataset, batch_size=BATCH_SIZE,
         num_workers=VAL_WORKERS,
-        persistent_workers=(VAL_WORKERS > 0),
+        persistent_workers=False,
         pin_memory=True,
         prefetch_factor=8 if VAL_WORKERS > 0 else None,
         multiprocessing_context=spawn_ctx if VAL_WORKERS > 0 else None,

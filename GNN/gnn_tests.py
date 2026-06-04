@@ -28,18 +28,27 @@ PLOTS_DIR = "test_plots"
 
 def load_test_data(bkg_type: str, batch_size: int = 256,
                    num_workers: int = 2) -> DataLoader:
-    sig_files = get_files(DATA_DIR, SIGNAL_DEC_IDS, "signal")
-    bkg_files = get_files(DATA_DIR, BKG_DEC_IDS[bkg_type], "background")
+    if bkg_type == "SEPPARATE_BKG":
+        sig_files = get_files(DATA_DIR, ["30011001"], "background")  # muons as "signal"
+        bkg_files = get_files(DATA_DIR, ["38000800"], "background")  # KL0 as background
+        relabel = True
+        label_str = "Muon (as signal)"
+    else:
+        sig_files = get_files(DATA_DIR, SIGNAL_DEC_IDS, "signal")
+        bkg_files = get_files(DATA_DIR, BKG_DEC_IDS[bkg_type], "background")
+        relabel = False
+        label_str = "Signal"
 
     sig_test = sig_files[-N_TEST:]
     bkg_test = bkg_files[-N_TEST:]
     test_pairs = get_paired_files(sig_test, bkg_test)
 
-    print(f"Signal chunks: {len(sig_test)}  |  "
+    print(f"{label_str} chunks: {len(sig_test)}  |  "
           f"Background chunks: {len(bkg_test)}  |  "
           f"Test pairs: {len(test_pairs)}")
 
-    dataset = ChunkIterableDataset(test_pairs, is_validation=True)
+    dataset = ChunkIterableDataset(test_pairs, is_validation=True,
+                                   relabel_signal=relabel)
     loader = DataLoader(
         dataset, batch_size=batch_size,
         num_workers=num_workers, persistent_workers=False,
@@ -213,7 +222,7 @@ def efficiency_rejection_vs_threshold(probs: torch.Tensor, labels: torch.Tensor,
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bkg_type", default="KL0", choices=["MUON", "KL0"])
+    parser.add_argument("--bkg_type", default="KL0", choices=["MUON", "KL0", "SEPPARATE_BKG"])
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--batch_size", type=int, default=256)
     args = parser.parse_args()
