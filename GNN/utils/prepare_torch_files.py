@@ -19,7 +19,7 @@ sys.path.append("/home3/alejandro.rodriguez/python_modules")
 from functions import *
 
 INPUT_FILE_PATH = "/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/"
-OUTPUT_DIR      = "/lustre/LHCb/alejandro.rodriguez/torch_data"
+OUTPUT_DIR      = "/lustre/LHCb/alejandro.rodriguez/torch_data"   # default, overridable via --output-dir
 TREE_NAME       = "VeloMultiTuple_73eaa531/Clusters"
 STATS_FILE      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stats/global_normalization_stats.json")
 
@@ -112,13 +112,14 @@ def process_event(args):
         return (event_id, None)
 
 
-def run_preparation(label, n_workers=24, test_mode=False, force=False):
+def run_preparation(label, n_workers=24, test_mode=False, force=False, output_dir=None):
     is_signal = 1 if label == "SIGNAL" else 0
-    dec_id = "40114060" if label == "SIGNAL" else "30011001" if label == "MUON" else "38000800"
+    dec_id = "40114061" if label == "SIGNAL" else "30011001" if label == "MUON" else "38000801"
     input_file_name = f"ntuple_{'signal' if is_signal else 'background'}_{dec_id}.root"
     full_path = f"{INPUT_FILE_PATH}{input_file_name}:{TREE_NAME}"
 
-    specific_output_dir = os.path.join(OUTPUT_DIR, 'signal' if is_signal else 'background', dec_id)
+    base_dir = output_dir if output_dir is not None else OUTPUT_DIR
+    specific_output_dir = os.path.join(base_dir, 'signal' if is_signal else 'background', dec_id)
     os.makedirs(specific_output_dir, exist_ok=True)
 
     existing_chunks = set()
@@ -317,20 +318,35 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prepare PyTorch Geometric files for CODEX-b.")
-    parser.add_argument("--label", type=str, choices=["MUON", "KL0", "SIGNAL", "ALL"], default="KL0",
+    parser.add_argument("--label", type=str, choices=["MUON", "KL0", "SIGNAL", "ALL"], default=None,
                         help="Data label to process (or 'ALL' for parallel processing).")
+    parser.add_argument("--labels", type=str, default=None,
+                        help="Comma-separated labels, e.g. 'SIGNAL,KL0'. Overrides --label.")
     parser.add_argument("--test_mode", action="store_true", help="Process only 1 chunk for testing.")
     parser.add_argument("--force", action="store_true", help="Delete existing chunks and regenerate from scratch.")
+    parser.add_argument("--output-dir", type=str, default=None,
+                        help=f"Output directory (default: {OUTPUT_DIR}).")
     args = parser.parse_args()
 
-    if args.label == "ALL":
+    if args.labels is not None:
+        labels = [lbl.strip() for lbl in args.labels.split(",")]
+    elif args.label == "ALL":
         labels = ["SIGNAL", "MUON", "KL0"]
+    elif args.label is not None:
+        labels = [args.label]
+    else:
+        labels = ["KL0"]
+
+    if len(labels) == 1:
+        run_preparation(labels[0], n_workers=24, test_mode=args.test_mode, force=args.force,
+                        output_dir=args.output_dir)
+    else:
         workers_per_label = max(1, 24 // len(labels))
         print(f"Processing labels IN PARALLEL: {labels} ({workers_per_label} workers each)")
         procs = []
         for lbl in labels:
             p = Process(target=run_preparation,
-                        args=(lbl, workers_per_label, args.test_mode, args.force))
+                        args=(lbl, workers_per_label, args.test_mode, args.force, args.output_dir))
             p.start()
             procs.append((lbl, p))
         for lbl, p in procs:
@@ -339,5 +355,3 @@ if __name__ == "__main__":
                 print(f"[{lbl}] Label FAILED (exit code {p.exitcode})", flush=True)
             else:
                 print(f"[{lbl}] Label finished successfully.")
-    else:
-        run_preparation(args.label, n_workers=24, test_mode=args.test_mode, force=args.force)

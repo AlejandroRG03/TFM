@@ -18,9 +18,10 @@ from functions import set_tfm_style
 
 set_tfm_style()
 
-DATA_DIR = "/lustre/LHCb/alejandro.rodriguez/torch_data"
-SIGNAL_DEC_IDS = ["40114060"]
-BKG_DEC_IDS = {"MUON": ["30011001"], "KL0": ["38000800"]}
+#DATA_DIR = "/lustre/LHCb/alejandro.rodriguez/torch_data"
+DATA_DIR = "/scratch/alejandro.rodriguez/torch_files"
+SIGNAL_DEC_IDS = ["40114061"]
+BKG_DEC_IDS = {"MUON": ["30011001"], "KL0": ["38000801"]}
 MODEL_DIR = "/home3/alejandro.rodriguez/TFM/GNN/models"
 N_TEST = 5
 
@@ -30,7 +31,7 @@ def load_test_data(bkg_type: str, batch_size: int = 256,
                    num_workers: int = 2) -> DataLoader:
     if bkg_type == "SEPPARATE_BKG":
         sig_files = get_files(DATA_DIR, ["30011001"], "background")  # muons as "signal"
-        bkg_files = get_files(DATA_DIR, ["38000800"], "background")  # KL0 as background
+        bkg_files = get_files(DATA_DIR, ["38000801"], "background")  # KL0 as background
         relabel = True
         label_str = "Muon (as signal)"
     else:
