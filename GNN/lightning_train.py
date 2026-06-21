@@ -36,21 +36,21 @@ from datetime import timedelta
 # CONFIGURATION
 # ==============================================================================
 
-DATA_DIR = "/lustre/LHCb/alejandro.rodriguez/torch_data"
-BKG_TYPE = "SEPPARATE_BKG" # check if our net can distinguish between muon and kl0, ignoring signal
+DATA_DIR = "/scratch/alejandro.rodriguez/new_torch"
+BKG_TYPE = "KL0" 
 
 DISCRIMINATE_BKG = (BKG_TYPE == "SEPPARATE_BKG")
 
 if DISCRIMINATE_BKG:
-    SIGNAL_DEC_IDS     = ["30011001"]   # muons as "signal" (y=1)
+    SIGNAL_DEC_IDS     = ["11114033"]
     BACKGROUND_DEC_IDS = ["38000800"]   # KL0 as "background" (y=0)
-    SIGNAL_DATA_TYPE   = "background"   # both live in background/ on disk
+    SIGNAL_DATA_TYPE   = "signal"
 else:
-    SIGNAL_DEC_IDS     = ["40114060"]
+    SIGNAL_DEC_IDS     = ["11114033"]
     BACKGROUND_DEC_IDS = ["30011001" if BKG_TYPE == "MUON" else "38000800"]
     SIGNAL_DATA_TYPE   = "signal"
 
-OUTPUT_NAME   = f"{BKG_TYPE}_CODEX_GNN"
+OUTPUT_NAME   = f"new_{BKG_TYPE}_CODEX_GNN"
 
 BATCH_SIZE    = 128    # H100: 100GB VRAM permite batches grandes
 ACCUM_STEPS   = 1      # effective batch = 128
@@ -66,7 +66,7 @@ MAX_VAL_PAIRS = 5       # Limit validation pairs
 USE_MULTI_GPU = False   # DDP causes NCCL timeouts with slow Lustre I/O (single GPU)
 
 # Fixed number of training chunk pairs (None = all available).
-MAX_TRAIN_PAIRS = 20  # rapido: ~20 pares para esta prueba
+MAX_TRAIN_PAIRS = 30
 
 # Per-worker chunk cache limit: 80% of available RAM ÷ NUM_WORKERS.
 # Auto-scales: more workers → less cache per worker, preventing OOM.

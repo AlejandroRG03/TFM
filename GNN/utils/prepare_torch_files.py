@@ -19,7 +19,7 @@ sys.path.append("/home3/alejandro.rodriguez/python_modules")
 from functions import *
 
 INPUT_FILE_PATH = "/lustre/LHCb/alejandro.rodriguez/script_emilio_hits/"
-OUTPUT_DIR      = "/lustre/LHCb/alejandro.rodriguez/torch_data"   # default, overridable via --output-dir
+OUTPUT_DIR      = "/scratch/alejandro.rodriguez/new_torch"   # default, overridable via --output-dir
 TREE_NAME       = "VeloMultiTuple_73eaa531/Clusters"
 STATS_FILE      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stats/global_normalization_stats.json")
 
@@ -114,7 +114,7 @@ def process_event(args):
 
 def run_preparation(label, n_workers=24, test_mode=False, force=False, output_dir=None):
     is_signal = 1 if label == "SIGNAL" else 0
-    dec_id = "40114061" if label == "SIGNAL" else "30011001" if label == "MUON" else "38000801"
+    dec_id = "11114033" if label == "SIGNAL" else "30011001" if label == "MUON" else "38000801"
     input_file_name = f"ntuple_{'signal' if is_signal else 'background'}_{dec_id}.root"
     full_path = f"{INPUT_FILE_PATH}{input_file_name}:{TREE_NAME}"
 

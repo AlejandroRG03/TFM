@@ -19,9 +19,9 @@ from functions import set_tfm_style
 
 set_tfm_style()
 
-DATA_DIR = "/scratch/alejandro.rodriguez/new_torch"
-SIGNAL_DEC_IDS = ["11114033"]
-BKG_DEC_IDS = {"MUON": ["30011001"], "KL0": ["38000800"]}
+DATA_DIR = "/scratch/alejandro.rodriguez/torch_pileup"
+SIGNAL_DEC_IDS = ["40114060"]
+BKG_DEC_IDS = {"pileup_MUON": ["38000800"]}
 MODEL_DIR = "/home3/alejandro.rodriguez/TFM/GNN/models"
 N_TEST = 5
 
@@ -31,21 +31,15 @@ PLOTS_DATA_DIR = "test_data"
 
 def save_plot_data(bkg_type: str, plot_name: str, **data) -> None:
     os.makedirs(PLOTS_DATA_DIR, exist_ok=True)
-    np.savez(os.path.join(PLOTS_DATA_DIR, f"new_{bkg_type}_{plot_name}.npz"), **data)
+    np.savez(os.path.join(PLOTS_DATA_DIR, f"{bkg_type}_{plot_name}.npz"), **data)
 
 
 def load_test_data(bkg_type: str, batch_size: int = 256,
                    num_workers: int = 2) -> DataLoader:
-    if bkg_type == "SEPPARATE_BKG":
-        sig_files = get_files(DATA_DIR, ["11114033"], "signal")
-        bkg_files = get_files(DATA_DIR, ["38000800"], "background")
-        relabel = True
-        label_str = "Signal"
-    else:
-        sig_files = get_files(DATA_DIR, SIGNAL_DEC_IDS, "signal")
-        bkg_files = get_files(DATA_DIR, BKG_DEC_IDS[bkg_type], "background")
-        relabel = False
-        label_str = "Signal"
+    sig_files = get_files(DATA_DIR, SIGNAL_DEC_IDS, "signal")
+    bkg_files = get_files(DATA_DIR, BKG_DEC_IDS[bkg_type], "background")
+    relabel = False
+    label_str = "Signal"
 
     sig_test = sig_files[-N_TEST:]
     bkg_test = bkg_files[-N_TEST:]
@@ -70,7 +64,7 @@ def load_model(bkg_type: str,
                device: str = "cuda") -> CODEXLightning:
     if checkpoint_path is None:
         model_dir = os.path.join(MODEL_DIR, bkg_type)
-        pattern = os.path.join(model_dir, f"new_{bkg_type}_CODEX_GNN_best*.ckpt")
+        pattern = os.path.join(model_dir, f"{bkg_type}_CODEX_GNN_best*.ckpt")
         candidates = sorted(glob.glob(pattern), key=os.path.getmtime)
         if not candidates:
             raise FileNotFoundError(f"No checkpoint found: {pattern}")
@@ -114,7 +108,7 @@ def plot_probability_distributions(probs: torch.Tensor, labels: torch.Tensor, bk
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(f"{PLOTS_DIR}/new_{bkg_type}_probability_distributions.pdf")
+    plt.savefig(f"{PLOTS_DIR}/{bkg_type}_probability_distributions.pdf")
 
 
 def compute_accuracy(probs: torch.Tensor, labels: torch.Tensor, threshold: float = 0.5) -> float:
@@ -160,7 +154,7 @@ def plot_roc_curve(probs: torch.Tensor, labels: torch.Tensor, bkg_type: str):
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(f"{PLOTS_DIR}/new_{bkg_type}_roc_curve.pdf")
+    plt.savefig(f"{PLOTS_DIR}/{bkg_type}_roc_curve.pdf")
 
 def plot_precision_recall_curve(probs: torch.Tensor, labels: torch.Tensor, bkg_type: str):
     precision, recall, _ = metrics.precision_recall_curve(labels.numpy(), probs.numpy())
@@ -175,7 +169,7 @@ def plot_precision_recall_curve(probs: torch.Tensor, labels: torch.Tensor, bkg_t
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(f"{PLOTS_DIR}/new_{bkg_type}_precision_recall_curve.pdf")
+    plt.savefig(f"{PLOTS_DIR}/{bkg_type}_precision_recall_curve.pdf")
 
 def compute_confusion_matrix(probs: torch.Tensor, labels: torch.Tensor, threshold: float = 0.5) -> np.ndarray:
     preds = (probs >= threshold).long()
@@ -213,7 +207,7 @@ def efficiency_rejection_curves(probs: torch.Tensor, labels: torch.Tensor, bkg_t
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(f"{PLOTS_DIR}/new_{bkg_type}_efficiency_rejection_curve.pdf")
+    plt.savefig(f"{PLOTS_DIR}/{bkg_type}_efficiency_rejection_curve.pdf")
 
 def efficiency_rejection_vs_threshold(probs: torch.Tensor, labels: torch.Tensor, bkg_type: str) -> None:
     thresholds = np.linspace(0, 1, 100)
@@ -238,7 +232,7 @@ def efficiency_rejection_vs_threshold(probs: torch.Tensor, labels: torch.Tensor,
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(f"{PLOTS_DIR}/new_{bkg_type}_efficiency_rejection_vs_threshold.pdf")
+    plt.savefig(f"{PLOTS_DIR}/{bkg_type}_efficiency_rejection_vs_threshold.pdf")
 
 
 def plot_canvas(probs: torch.Tensor, labels: torch.Tensor, bkg_type: str) -> None:
@@ -303,14 +297,14 @@ def plot_canvas(probs: torch.Tensor, labels: torch.Tensor, bkg_type: str) -> Non
 
     fig.suptitle(f"Evaluation for {bkg_type} BKG")
     fig.tight_layout()
-    plt.savefig(f"{PLOTS_DIR}/new_{bkg_type}_canvas.pdf")
+    plt.savefig(f"{PLOTS_DIR}/{bkg_type}_canvas.pdf")
 
 
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bkg_type", default="KL0", choices=["MUON", "KL0", "SEPPARATE_BKG"])
+    parser.add_argument("--bkg_type", default="pileup_MUON", choices=["pileup_MUON"])
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--batch_size", type=int, default=256)
     args = parser.parse_args()

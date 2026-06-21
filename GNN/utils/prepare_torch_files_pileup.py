@@ -238,7 +238,7 @@ def process_event(args):
 # ==============================================================================
 
 def run_preparation(label, n_workers=24, test_mode=False, force=False,
-                    n_minbias=9):
+                    n_minbias=9, end_chunks=None):
     global _MINBIAS_DICT
 
     minbias_dict = _MINBIAS_DICT
@@ -300,6 +300,18 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False,
     print(f"\n[{label}] Starting processing: {full_path}")
     print(f"[{label}] Output: {specific_output_dir}")
 
+    # ── end-chunks: read entry count, compute start offset ──────────
+    step_size = STEP_SIZE
+    entry_start = None
+    if end_chunks is not None:
+        with uproot.open(full_path.split(":")[0]) as f:
+            total_entries = f[TREE_NAME].num_entries
+        step_entries = max(1, total_entries // end_chunks)
+        entry_start = max(0, total_entries - end_chunks * step_entries)
+        step_size = step_entries
+        print(f"[{label}] --end-chunks={end_chunks}: {total_entries} entries, "
+              f"starting at entry {entry_start}, step={step_entries} entries")
+
     # ── Main loop ───────────────────────────────────────────────────────
     chunk_counter = 0
     total_events  = 0
@@ -316,7 +328,9 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False,
 
     try:
         for chunk in uproot.iterate(full_path, VAR_NAMES,
-                                    step_size=STEP_SIZE, library="pd"):
+                                    step_size=step_size,
+                                    entry_start=entry_start,
+                                    library="pd"):
             t0 = time.time()
 
             # ── Beamspot centering + z-cut ──────────────────────────
@@ -455,6 +469,9 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False,
             if test_mode:
                 print(f"[{label}] Test mode: stopping after 1 chunk.")
                 break
+            if end_chunks is not None and chunk_counter >= end_chunks:
+                print(f"[{label}] Reached {end_chunks} chunks (--end-chunks).")
+                break
 
     except Exception as e:
         print(f"\n[{label}] ERROR at chunk {chunk_counter}: {e}", flush=True)
@@ -466,7 +483,7 @@ def run_preparation(label, n_workers=24, test_mode=False, force=False,
         pool.shutdown(wait=True)
 
     # ── Final leftover (sequential, 1 composite event) ─────────────────
-    if not leftover_df.empty and not test_mode:
+    if not leftover_df.empty and not test_mode and end_chunks is None:
         try:
             sig_id = int(leftover_df['eventNumber'].iloc[0])
             selected_ids = mb_selector.select(n_minbias)
@@ -689,6 +706,10 @@ if __name__ == "__main__":
         "--run-tests", action="store_true",
         help="Run unit tests (no ROOT files needed) and exit."
     )
+    parser.add_argument(
+        "--end-chunks", type=int, default=None,
+        help="Only process the last N chunks (saves space, useful for testing)."
+    )
     args = parser.parse_args()
 
     if args.run_tests:
@@ -714,6 +735,9 @@ if __name__ == "__main__":
         print(f"[MAIN] Processing labels IN PARALLEL: {labels} "
               f"({workers_per_label} workers each, {args.n_minbias} "
               f"minbias events per composite)")
+        if args.end_chunks is not None:
+            print("[WARNING] --end-chunks is ignored when --label=ALL. "
+                  "Use individual labels for end-chunks.")
         procs = []
         for lbl in labels:
             p = Process(
@@ -733,4 +757,5 @@ if __name__ == "__main__":
     else:
         run_preparation(args.label, n_workers=24,
                         test_mode=args.test_mode, force=args.force,
-                        n_minbias=args.n_minbias)
+                        n_minbias=args.n_minbias,
+                        end_chunks=args.end_chunks)
